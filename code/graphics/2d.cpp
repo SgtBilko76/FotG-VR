@@ -58,6 +58,9 @@
 #endif
 
 #include <algorithm>
+#ifdef __ANDROID__
+#include <sys/system_properties.h>
+#endif
 #include <climits>
 
 
@@ -629,8 +632,12 @@ static SCP_vector<ResolutionInfo> resolution_vr_enumerator()
 	SCP_vector<ResolutionInfo> out;
 
 #ifdef __ANDROID__
-	// Standalone headsets: finer steps at the low end, the GPU is the limit
-	for (int i = 1000; i <= 2000; i += 250) {
+	// Standalone headsets: fine steps, the GPU is the limit. The default must be in the list too:
+	// mod option screens (e.g. Fate of the Galaxy's) only offer listed values and otherwise reset
+	// the setting to the first one.
+	for (int i = 750; i <= 2000; i += 125) {
+		if (i == 1750)
+			out.emplace_back(ResolutionInfo(1680, 1680));
 		out.emplace_back(ResolutionInfo(i, i));
 	}
 #else
@@ -677,8 +684,14 @@ static ResolutionInfo resolution_default()
 static ResolutionInfo resolution_vr_default()
 {
 #ifdef __ANDROID__
-	// Standalone headsets (Quest): render both eyes on a mobile GPU
-	return {(uint32_t)1680, (uint32_t)1680};
+	// Standalone headsets: render both eyes on a mobile GPU. Fate of the Galaxy's ships and
+	// cockpits are heavy: Quest 3 (XR2 Gen 2) holds 72 fps up to about 1250 (1680: 43 fps), so
+	// 1125 leaves headroom for big battles. XR2 Gen 1 headsets (Quest 2/Pro, PICO 4, PICO Neo 3;
+	// board platform "kona") have roughly half the GPU: 750.
+	char platform[PROP_VALUE_MAX] = {};
+	__system_property_get("ro.board.platform", platform);
+	const uint32_t size = (strcmp(platform, "kona") == 0) ? 750u : 1125u;
+	return {size, size};
 #else
 	return {(uint32_t)2500, (uint32_t)2500};
 #endif

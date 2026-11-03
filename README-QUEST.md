@@ -18,7 +18,8 @@ and goes on the headset.
    folder `/sdcard/FotG/FotG_R/data` holds `tables`, `models`, `maps`, ...):
    - With Python 3, 7-Zip and the Quest connected by USB:
      `python3 tools/quest/get_fotg_data.py --push`
-     (downloads the newest release from Nebula, checks it and copies it over).
+     (downloads the newest release from Nebula, checks it, checks the free space on
+     the headset and copies it over).
    - Or install Fate of the Galaxy with Knossos.NET on a PC and copy the
      contents of its `FotG_R-<version>` folder to `/sdcard/FotG/FotG_R` with
      SideQuest.
@@ -27,13 +28,21 @@ and goes on the headset.
 
 ### PICO (untested)
 
-The same APK also runs on PICO 4 / Neo 3 (PICO OS 5.9.0 or newer); the PICO
-controllers use the same button layout as the Touch controllers below. PICO
-support is not tested on PICO hardware yet. Install with `adb install -r -g`
-(SideQuest is a Quest tool), copy the game data to `/sdcard/FotG/FotG_R` the
-same way, and allow storage access when the app asks on the first start (it
-restarts by itself afterwards). If it doesn't start, `adb logcat -s FotGVR:* QuestVR:*`
-shows how far it gets.
+The same APK also runs on PICO 4, PICO 4 Ultra and PICO Neo 3 (PICO OS 5.9.0 or
+newer); the PICO controllers use the same button layout as the Touch controllers
+below. PICO support is not tested on PICO hardware yet.
+
+1. Install with `adb install -r -g FotG-VR-<version>.apk` (SideQuest is a Quest tool).
+2. Copy the game data the same way: `python3 tools/quest/get_fotg_data.py --push`
+   (add `--serial <id>` if `adb devices` lists more than one device), or copy the
+   `data` folder to `/sdcard/FotG/FotG_R` with any file manager / adb.
+3. Start the game and allow storage access when it asks; it restarts by itself.
+
+The rendering resolution is picked for the headset's chip: 1125 x 1125 per eye on
+XR2 Gen 2 (Quest 3/3S, PICO 4 Ultra), 750 x 750 on XR2 Gen 1 (Quest 2/Pro, PICO 4,
+Neo 3). Change it in Options > Detail > Game VR Resolution (restart needed). If the
+game doesn't start or the controllers do nothing,
+`adb logcat -s FotGVR:* QuestVR:*` shows how far it gets.
 
 ## Controls
 

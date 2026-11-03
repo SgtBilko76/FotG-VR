@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Download Fate of the Galaxy from Nebula (the Knossos mod server), unpack it and
-optionally copy it to the Quest.
+optionally copy it to the headset (Meta Quest or PICO, connected by USB with adb).
 
-    python3 tools/quest/get_fotg_data.py [--version 1.1.1] [--dir FotG-data] [--push]
+    python3 tools/quest/get_fotg_data.py [--version 1.1.1] [--dir FotG-data] [--push [--serial <id>]]
 
 Needs 7-Zip (7zz / 7z / 7za on PATH, or --7z <path>) and, for --push, adb.
 Result: <dir>/FotG_R/data/... ; on the headset /sdcard/FotG/FotG_R/data/...
@@ -39,7 +39,8 @@ def main():
     ap.add_argument("--version", help="mod version (default: newest on Nebula)")
     ap.add_argument("--dir", default="FotG-data")
     ap.add_argument("--7z", dest="sevenzip")
-    ap.add_argument("--push", action="store_true", help="copy to the Quest with adb")
+    ap.add_argument("--push", action="store_true", help="copy to the headset with adb")
+    ap.add_argument("--serial", help="adb serial of the headset (only needed with several devices)")
     ap.add_argument("--adb", default=shutil.which("adb") or os.path.expanduser("~/Android/Sdk/platform-tools/adb"))
     a = ap.parse_args()
 
@@ -70,15 +71,21 @@ def main():
             subprocess.check_call([sz, "x", "-y", "-bso0", "-bsp0", "-o" + out, path])
 
     if a.push:
-        adb = a.adb
-        subprocess.check_call([adb, "shell", "mkdir", "-p", QUEST_DIR + "/data"])
+        adb = [a.adb] + (["-s", a.serial] if a.serial else [])
+        need = sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(out) for f in fs)
+        df = subprocess.check_output(adb + ["shell", "df", "-k", "/sdcard"]).decode().split("\n")
+        free = int([l for l in df if l.strip()][-1].split()[3]) * 1024
+        print("needs %.1f GB on the headset, %.1f GB free" % (need / 1e9, free / 1e9))
+        if free < need:
+            sys.exit("not enough free space on the headset")
+        subprocess.check_call(adb + ["shell", "mkdir", "-p", QUEST_DIR + "/data"])
         data = os.path.join(out, "data")
         for d in sorted(os.listdir(data)):
             print("pushing", d)
-            subprocess.check_call([adb, "push", os.path.join(data, d), QUEST_DIR + "/data/"])
+            subprocess.check_call(adb + ["push", os.path.join(data, d), QUEST_DIR + "/data/"])
         n_pc = sum(len(fs) for _, _, fs in os.walk(out))
-        n_q = subprocess.check_output([adb, "shell", "find %s -type f | wc -l" % QUEST_DIR]).decode().strip()
-        print("files on PC: %d, on the Quest: %s" % (n_pc, n_q))
+        n_q = subprocess.check_output(adb + ["shell", "find %s -type f | wc -l" % QUEST_DIR]).decode().strip()
+        print("files on PC: %d, on the headset: %s" % (n_pc, n_q))
     print("done:", out)
 
 
