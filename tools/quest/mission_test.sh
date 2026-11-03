@@ -8,7 +8,7 @@ ADB="${ADB:-$HOME/Android/Sdk/platform-tools/adb}"
 FLY="${1:-60}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-"$DIR/run.sh" 50 "-pilot Bilko -start_mission $FIRST_MISSION" >/dev/null
+"$DIR/run.sh" 50 "-pilot Bilko -start_mission ${MISSION:-$FIRST_MISSION}" >/dev/null
 "$ADB" shell input keyevent KEYCODE_ENTER                              # new user tip
 sleep 20
 "$ADB" shell input keycombination KEYCODE_CTRL_LEFT KEYCODE_ENTER      # fiction viewer

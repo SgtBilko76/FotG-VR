@@ -7,22 +7,24 @@ Star Wars Original Trilogy total conversion, running natively on the Meta Quest 
 built on the [FreeSpace Open](https://github.com/scp-fs2open/fs2open.github.com)
 engine with OpenXR on OpenGL ES. Branch: `fotg-vr`. FreeSpace 2 is not needed.
 
-The APK contains only the engine. The game data (free, about 2.6 GB download,
-8.7 GB unpacked) comes from the Fate of the Galaxy team's Nebula/Knossos release
-and goes on the headset.
+The APK contains only the engine. The game data (free, about 2.6 GB download)
+comes from the Fate of the Galaxy team's Nebula/Knossos release and goes on the
+headset: 4.2 GB there when installed with the script below, which packs it into
+archives (much faster to load from the headset's storage) and halves the largest
+ship and planet textures (cockpits stay full size).
 
 ## Install
 
 1. Install `FotG-VR-<version>.apk` with SideQuest or `adb install -r -g`.
-2. Get the game data into `/sdcard/FotG/FotG_R` on the headset (so that the
-   folder `/sdcard/FotG/FotG_R/data` holds `tables`, `models`, `maps`, ...):
-   - With Python 3, 7-Zip and the Quest connected by USB:
+2. Get the game data into `/sdcard/FotG/FotG_R` on the headset:
+   - Recommended, with Python 3, 7-Zip and the Quest connected by USB:
      `python3 tools/quest/get_fotg_data.py --push`
-     (downloads the newest release from Nebula, checks it, checks the free space on
-     the headset and copies it over).
+     (downloads the newest release from Nebula, checks it, packs it into `fotg_*.vp`
+     archives with the big textures halved, checks the free space on the headset and
+     copies them to `/sdcard/FotG/FotG_R`).
    - Or install Fate of the Galaxy with Knossos.NET on a PC and copy the
      contents of its `FotG_R-<version>` folder to `/sdcard/FotG/FotG_R` with
-     SideQuest.
+     SideQuest (8.7 GB of loose files: works, but starts and loads more slowly).
 3. Start **Fate of the Galaxy VR** from *Unknown Sources* and allow
    "access to all files" when asked.
 
