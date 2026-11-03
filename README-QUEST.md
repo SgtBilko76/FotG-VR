@@ -1,4 +1,6 @@
-# Fate of the Galaxy VR (Meta Quest)
+# Fate of the Galaxy VR (Meta Quest and PICO)
+
+**Download, install guide, controls and pictures: [portroyale.online/fotg.html](https://portroyale.online/fotg.html)**
 
 [Fate of the Galaxy](https://www.moddb.com/games/fate-of-the-galaxy), the free
 Star Wars Original Trilogy total conversion, running natively on the Meta Quest 3,
@@ -23,7 +25,19 @@ and goes on the headset.
 3. Start **Fate of the Galaxy VR** from *Unknown Sources* and allow
    "access to all files" when asked.
 
+### PICO (untested)
+
+The same APK also runs on PICO 4 / Neo 3 (PICO OS 5.9.0 or newer); the PICO
+controllers use the same button layout as the Touch controllers below. PICO
+support is not tested on PICO hardware yet. Install with `adb install -r -g`
+(SideQuest is a Quest tool), copy the game data to `/sdcard/FotG/FotG_R` the
+same way, and allow storage access when the app asks on the first start (it
+restarts by itself afterwards). If it doesn't start, `adb logcat -s FotGVR:* QuestVR:*`
+shows how far it gets.
+
 ## Controls
+
+![Controller mapping](docs/controls.webp)
 
 Menus, briefings and cutscenes are shown on a large screen in front of you.
 
