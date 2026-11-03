@@ -7,26 +7,28 @@ Star Wars Original Trilogy total conversion, running natively on the Meta Quest 
 built on the [FreeSpace Open](https://github.com/scp-fs2open/fs2open.github.com)
 engine with OpenXR on OpenGL ES. Branch: `fotg-vr`. FreeSpace 2 is not needed.
 
-The APK contains only the engine. The game data (free, about 2.6 GB download)
-comes from the Fate of the Galaxy team's Nebula/Knossos release and goes on the
-headset: 4.2 GB there when installed with the script below, which packs it into
-archives (much faster to load from the headset's storage) and halves the largest
-ship and planet textures (cockpits stay full size).
+The APK contains only the engine. The game data (free) comes from the Fate of the
+Galaxy team's official Nebula release; the app's **One-Tap Installer** downloads it
+on first start (2.6 GB download, 4.6 GB on the headset).
 
 ## Install
 
 1. Install `FotG-VR-<version>.apk` with SideQuest or `adb install -r -g`.
-2. Get the game data into `/sdcard/FotG/FotG_R` on the headset:
-   - Recommended, with Python 3, 7-Zip and the Quest connected by USB:
-     `python3 tools/quest/get_fotg_data.py --push`
-     (downloads the newest release from Nebula, checks it, packs it into `fotg_*.vp`
-     archives with the big textures halved, checks the free space on the headset and
-     copies them to `/sdcard/FotG/FotG_R`).
-   - Or install Fate of the Galaxy with Knossos.NET on a PC and copy the
-     contents of its `FotG_R-<version>` folder to `/sdcard/FotG/FotG_R` with
-     SideQuest (8.7 GB of loose files: works, but starts and loads more slowly).
-3. Start **Fate of the Galaxy VR** from *Unknown Sources* and allow
-   "access to all files" when asked.
+2. Start **Fate of the Galaxy VR** from *Unknown Sources*. On the first start the
+   **One-Tap Installer** opens:
+   - Press *Allow file access*, switch on "Allow access", go back.
+   - Press *Download and install*. It downloads the game data from FSNebula, checks
+     it, packs it into a few archives (fast loading) and halves the largest ship and
+     planet textures (cockpits stay full size). About 15 - 30 minutes on Wi-Fi;
+     keep the headset on. If it gets interrupted, start the app again and it
+     continues where it stopped.
+   - When it is done, the game starts by itself.
+
+Without Wi-Fi on the headset: on a PC with Python 3, 7-Zip and the headset on USB,
+`python3 tools/quest/get_fotg_data.py --push` does the same and copies the result
+to `/sdcard/FotG/FotG_R`. A plain copy of the Knossos.NET install (`FotG_R-<version>`
+folder contents to `/sdcard/FotG/FotG_R`) works too, but takes 8.7 GB and loads
+more slowly.
 
 ### PICO (untested)
 
@@ -35,10 +37,8 @@ newer); the PICO controllers use the same button layout as the Touch controllers
 below. PICO support is not tested on PICO hardware yet.
 
 1. Install with `adb install -r -g FotG-VR-<version>.apk` (SideQuest is a Quest tool).
-2. Copy the game data the same way: `python3 tools/quest/get_fotg_data.py --push`
-   (add `--serial <id>` if `adb devices` lists more than one device), or copy the
-   `data` folder to `/sdcard/FotG/FotG_R` with any file manager / adb.
-3. Start the game and allow storage access when it asks; it restarts by itself.
+2. Start the game: the One-Tap Installer asks for storage access and downloads the
+   game data (or use `python3 tools/quest/get_fotg_data.py --push --serial <id>`).
 
 The rendering resolution is picked for the headset's chip: 1125 x 1125 per eye on
 XR2 Gen 2 (Quest 3/3S, PICO 4 Ultra), 750 x 750 on XR2 Gen 1 (Quest 2/Pro, PICO 4,
