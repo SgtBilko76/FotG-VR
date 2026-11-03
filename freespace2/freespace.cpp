@@ -843,6 +843,11 @@ static void set_dead_view_letterbox_clip()
  * Call once a frame to diminish the flash effect to 0.
  * @param frametime Period over which to dimish at ::DIMINISH_RATE
  */
+// Quest: the colour flash (hits, big explosions, sun glare) of the current frame, drawn into both
+// eye images instead of the HUD layer so it fills the whole view (see game_render_vr_flash)
+static int Game_vr_flash_rgb[3] = { 0, 0, 0 };
+static bool Game_vr_flash_to_eyes = false;
+
 static void game_flash_diminish(float frametime)
 {
 	float dec_amount = frametime*DIMINISH_RATE;
@@ -921,7 +926,11 @@ static void game_flash_diminish(float frametime)
 		if ( g < 0 ) g = 0; else if ( g > 255 ) g = 255;
 		if ( b < 0 ) b = 0; else if ( b > 255 ) b = 255;
 
-		if ( (r!=0) || (g!=0) || (b!=0) ) {
+		if (Game_vr_flash_to_eyes) {
+			Game_vr_flash_rgb[0] = r;
+			Game_vr_flash_rgb[1] = g;
+			Game_vr_flash_rgb[2] = b;
+		} else if ( (r!=0) || (g!=0) || (b!=0) ) {
 			// the letterbox bars are drawn earlier in the frame, but game_render_hud calls gr_reset_clip()
 			// before this runs, so the flash would paint over the bars unless we re-apply the letterbox clip
 			bool letterbox_active = (Game_mode & GM_DEAD) || (supernova_stage() >= SUPERNOVA_STAGE::HIT);
@@ -4466,6 +4475,10 @@ void game_do_full_frame(DEBUG_TIMER_SIG const vec3d* offset = nullptr, const mat
 
 	if (!Game_vr_hud_layer) {
 		game_show_time_left();
+	} else if (Game_vr_flash_rgb[0] || Game_vr_flash_rgb[1] || Game_vr_flash_rgb[2]) {
+		// Quest: the hit / explosion flash over the whole eye image (worked out in the HUD pass)
+		gr_reset_clip();
+		gr_flash(Game_vr_flash_rgb[0], Game_vr_flash_rgb[1], Game_vr_flash_rgb[2]);
 	}
 
 	gr_reset_clip();
@@ -4606,7 +4619,12 @@ void game_frame(bool paused)
 				// Quest: HUD once, on its own cockpit-fixed layer; the eyes get the scene only
 				if (openxr_quest_hud_begin()) {
 					util::Random::seed(random);
+					Game_vr_flash_to_eyes = true;
+					Game_vr_flash_rgb[0] = Game_vr_flash_rgb[1] = Game_vr_flash_rgb[2] = 0;
 					game_render_vr_hud_layer();
+					Game_vr_flash_to_eyes = false;
+					if (openxr_quest_test_flash())
+						Game_vr_flash_rgb[0] = 160; // test hook: setprop debug.questvr.flash 1
 					openxr_quest_hud_end();
 					Game_vr_hud_layer = true;
 				}

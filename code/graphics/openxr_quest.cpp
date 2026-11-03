@@ -559,6 +559,12 @@ void openxr_quest_set_hud_canvas_w(int w)
 	QLOG("HUD canvas width %d", hudCanvasW);
 }
 
+bool openxr_quest_test_flash()
+{
+	char v[PROP_VALUE_MAX] = {};
+	return __system_property_get("debug.questvr.flash", v) > 0 && v[0] == '1';
+}
+
 float openxr_quest_hud_text_scale()
 {
 	// test override: setprop debug.questvr.hudtext 1.6
@@ -995,6 +1001,7 @@ bool openxr_quest_has_layer_settings() { return false; }
 void openxr_quest_set_hud_canvas_w(int) {}
 int openxr_quest_hud_canvas_w() { return gr_screen.max_w; }
 float openxr_quest_hud_text_scale() { return 1.0f; }
+bool openxr_quest_test_flash() { return false; }
 bool openxr_quest_radial_render(int, uint8_t*, bool) { return false; }
 bool openxr_quest_radial_pose(int, float[3], float[4], float[2]) { return false; }
 bool openxr_quest_hud_begin() { return false; }

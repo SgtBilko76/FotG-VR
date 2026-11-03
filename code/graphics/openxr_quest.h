@@ -31,6 +31,8 @@ int openxr_quest_hud_canvas_w();
 void openxr_quest_set_hud_canvas_w(int w);
 // Text size factor on the HUD layer (it spans the whole field of view, so small HUD fonts need help)
 float openxr_quest_hud_text_scale();
+// test hook (setprop debug.questvr.flash 1): show a red hit flash every frame
+bool openxr_quest_test_flash();
 // Distance (metres) of the HUD layer in front of the recentred head; far enough that head
 // movement and eye convergence barely shift the reticle against distant targets
 constexpr float OPENXR_QUEST_HUD_DISTANCE = 10.0f;
