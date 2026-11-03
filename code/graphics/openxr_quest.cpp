@@ -6,6 +6,7 @@ const char* const OPENXR_QUEST_PAD_NAME = "Quest Touch (VR)";
 
 #include <jni.h>
 #include <android/log.h>
+#include <sys/system_properties.h>
 #include <SDL3/SDL.h>
 
 #define XR_USE_PLATFORM_ANDROID
@@ -15,6 +16,7 @@ const char* const OPENXR_QUEST_PAD_NAME = "Quest Touch (VR)";
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
 
 #include "graphics/2d.h"
+#include "graphics/render.h"
 #include "graphics/openxr_quest_keyboard.h"
 #include "io/key.h"
 #include "io/mouse.h"
@@ -52,11 +54,31 @@ SCP_vector<int> pendingKeyUps;
 
 // Throttle lever (0 = stop .. 1 = full), driven by the right stick Y and held where it is left
 float throttleLever = 0.0f;
-bool prevShiftStickUp = false, prevShiftStickDown = false;
-// grip layer flicks (one pad-button pulse per flick): left stick = power, right stick X = shields
-enum { FLICK_WEAPONS, FLICK_SHIELDS, FLICK_ENGINES, FLICK_BALANCE, FLICK_SHIELD_FRONT, FLICK_SHIELD_REAR, FLICK_COUNT };
-bool prevFlick[FLICK_COUNT] = {};
-int flickPulse[FLICK_COUNT] = {};
+// Radial menu (left grip held in flight): the left stick points at one of RADIAL_COUNT actions,
+// releasing the grip triggers it (stick centred = nothing). Clockwise from the top; each action
+// is a pad button bound in control_config_quest_touch_defaults.
+struct RadialItem {
+	const char* label;
+	SDL_GamepadButton button;
+};
+const RadialItem RADIAL_ITEMS[] = {
+	{ "Shields front", SDL_GAMEPAD_BUTTON_START },
+	{ "Next target", SDL_GAMEPAD_BUTTON_MISC1 },
+	{ "Target attacker", SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1 },
+	{ "Next subsystem", SDL_GAMEPAD_BUTTON_LEFT_PADDLE1 },
+	{ "Targeting computer", SDL_GAMEPAD_BUTTON_LEFT_SHOULDER },
+	{ "Comms menu", SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2 },
+	{ "Shields rear", SDL_GAMEPAD_BUTTON_BACK },
+	{ "Chase view", SDL_GAMEPAD_BUTTON_MISC2 },
+	{ "Balance power", SDL_GAMEPAD_BUTTON_TOUCHPAD },
+	{ "Power: engines", SDL_GAMEPAD_BUTTON_MISC6 },
+	{ "Power: shields", SDL_GAMEPAD_BUTTON_MISC5 },
+	{ "Power: lasers", SDL_GAMEPAD_BUTTON_MISC4 },
+};
+constexpr int RADIAL_COUNT = static_cast<int>(sizeof(RADIAL_ITEMS) / sizeof(RADIAL_ITEMS[0]));
+bool radialOpen = false, prevRadial = false;
+int radialSel = -1;                       // highlighted item, -1 = none (stick centred)
+int radialPulseItem = -1, radialPulse = 0; // item whose button is held down for a few frames
 bool prevCommsUp = false, prevCommsDown = false;
 float lastUpdateSeconds = -1.0f;
 // left stick click: tap = autopilot (sent on release), hold = warp out
@@ -618,19 +640,41 @@ void openxr_quest_update(bool stereo_frame)
 				SDL_SetJoystickVirtualButton(pad, b, down);
 		};
 
-		// right stick Y: throttle lever (full sweep in about one second); with the grip: full / stop
-		if (shift) {
-			const bool up = stR.y > 0.7f, downs = stR.y < -0.7f;
-			if (up && !prevShiftStickUp)
-				throttleLever = 1.0f;
-			if (downs && !prevShiftStickDown)
-				throttleLever = 0.0f;
-			prevShiftStickUp = up;
-			prevShiftStickDown = downs;
-		} else {
-			prevShiftStickUp = prevShiftStickDown = false;
-			if (std::fabs(stR.y) > 0.15f)
-				throttleLever = std::max(0.0f, std::min(1.0f, throttleLever + stR.y * dt));
+		// right stick Y: throttle lever (full sweep in about one second)
+		if (std::fabs(stR.y) > 0.15f)
+			throttleLever = std::max(0.0f, std::min(1.0f, throttleLever + stR.y * dt));
+
+		// radial menu: open while the left grip is held (not while the comms menu is up)
+		const bool radial = shift && !comms;
+		if (radial) {
+			const float mag = std::sqrt(stL.x * stL.x + stL.y * stL.y);
+			if (mag > 0.5f) {
+				// angle clockwise from straight up
+				float ang = std::atan2(stL.x, stL.y);
+				if (ang < 0.0f)
+					ang += 2.0f * PI;
+				radialSel = static_cast<int>(std::lround(ang / (2.0f * PI / RADIAL_COUNT))) % RADIAL_COUNT;
+			} else if (mag < 0.3f) {
+				radialSel = -1;
+			}
+		} else if (prevRadial) {
+			// grip released: trigger the highlighted action
+			if (radialSel >= 0) {
+				radialPulseItem = radialSel;
+				radialPulse = 2;
+			}
+			radialSel = -1;
+		}
+		prevRadial = radial;
+		radialOpen = radial;
+		{
+			// test hook: `adb shell setprop debug.questvr.radial <item>` shows the menu with that item
+			// highlighted (-1 = none), `setprop debug.questvr.radial ""` hides it again
+			char v[PROP_VALUE_MAX] = {};
+			if (__system_property_get("debug.questvr.radial", v) > 0 && !radial) {
+				radialOpen = true;
+				radialSel = std::max(-1, std::min(RADIAL_COUNT - 1, atoi(v)));
+			}
 		}
 
 		// comms menu open: left stick up/down moves the selection, a trigger or A picks it
@@ -643,22 +687,23 @@ void openxr_quest_update(bool stereo_frame)
 		prevCommsDown = comms && stL.y < -0.6f;
 
 		if (pad) {
-			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTX, (comms || shift) ? 0 : axisValue(stL.x));
-			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTY, (comms || shift) ? 0 : axisValue(-stL.y));
-			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX, shift ? 0 : axisValue(stR.x));
+			// the left stick points into the radial menu while it is open, so it doesn't steer then
+			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTX, (comms || radial) ? 0 : axisValue(stL.x));
+			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTY, (comms || radial) ? 0 : axisValue(-stL.y));
+			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX, axisValue(stR.x));
 			// absolute throttle axis: up (-32767) = full speed, down (+32767) = stop
 			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTY, axisValue(1.0f - 2.0f * throttleLever));
 			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, comms ? 0 : triggerValue(trigL));
 			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, comms ? 0 : triggerValue(trigR));
 		}
 
-		const bool normal = !shift && !comms;
+		const bool normal = !comms;
 		btn(SDL_GAMEPAD_BUTTON_SOUTH, normal && a);
 		btn(SDL_GAMEPAD_BUTTON_EAST, normal && b);
 		btn(SDL_GAMEPAD_BUTTON_WEST, normal && x);
 		btn(SDL_GAMEPAD_BUTTON_NORTH, normal && y);
 		// left stick click: short tap = laser fire mode (pad LEFT_STICK), held for WARP_HOLD_SECONDS = hyperspace out
-		if (normal && clickL) {
+		if (normal && !radial && clickL) {
 			if (clickLDownSince < 0.0f) {
 				clickLDownSince = now;
 				clickLWarpSent = false;
@@ -678,35 +723,17 @@ void openxr_quest_update(bool stereo_frame)
 		if (warpPulse > 0)
 			warpPulse--;
 		btn(SDL_GAMEPAD_BUTTON_RIGHT_STICK, normal && clickR);
-		btn(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, !shift && gripR > 0.5f); // S-foils
-		btn(SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, shift && gripR > 0.5f);   // targeting computer
+		btn(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, gripR > 0.5f); // S-foils
 
-		// grip layer flicks: left stick up/down/right/left = power to weapons/shields/engines/balance,
-		// right stick right/left = shields front/rear
-		{
-			const bool held[FLICK_COUNT] = { shift && stL.y > 0.7f, shift && stL.y < -0.7f,
-				shift && stL.x > 0.7f, shift && stL.x < -0.7f,
-				shift && stR.x > 0.7f, shift && stR.x < -0.7f };
-			static const SDL_GamepadButton flickBtn[FLICK_COUNT] = { SDL_GAMEPAD_BUTTON_MISC4,
-				SDL_GAMEPAD_BUTTON_MISC5, SDL_GAMEPAD_BUTTON_MISC6, SDL_GAMEPAD_BUTTON_TOUCHPAD,
-				SDL_GAMEPAD_BUTTON_START, SDL_GAMEPAD_BUTTON_BACK };
-			for (int f = 0; f < FLICK_COUNT; f++) {
-				if (held[f] && !prevFlick[f])
-					flickPulse[f] = 2;
-				prevFlick[f] = held[f];
-				btn(flickBtn[f], flickPulse[f] > 0);
-				if (flickPulse[f] > 0)
-					flickPulse[f]--;
-			}
+		// radial menu actions (one short press each); Y also closes an open comms menu
+		for (int i = 0; i < RADIAL_COUNT; i++) {
+			bool down = radialPulse > 0 && radialPulseItem == i;
+			if (RADIAL_ITEMS[i].button == SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2)
+				down = down || (comms && y);
+			btn(RADIAL_ITEMS[i].button, down);
 		}
-
-		// second layer (left grip held)
-		btn(SDL_GAMEPAD_BUTTON_MISC1, shift && a);
-		btn(SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1, shift && b);
-		btn(SDL_GAMEPAD_BUTTON_LEFT_PADDLE1, shift && x);
-		btn(SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2, (shift || comms) && y); // also closes the comms menu
-		btn(SDL_GAMEPAD_BUTTON_LEFT_PADDLE2, shift && clickL);
-		btn(SDL_GAMEPAD_BUTTON_MISC2, shift && clickR); // chase view on / off
+		if (radialPulse > 0 && --radialPulse == 0)
+			radialPulseItem = -1;
 
 		// comms menu
 		btn(SDL_GAMEPAD_BUTTON_DPAD_UP, commsUp);
@@ -723,8 +750,9 @@ void openxr_quest_update(bool stereo_frame)
 		lastUpdateSeconds = -1.0f;
 		clickLDownSince = -1.0f;
 		autopilotPulse = warpPulse = 0;
-		for (int f = 0; f < FLICK_COUNT; f++)
-			prevFlick[f] = false, flickPulse[f] = 0;
+		radialOpen = prevRadial = false;
+		radialSel = radialPulseItem = -1;
+		radialPulse = 0;
 		setPadNeutral();
 
 		// the hand that pulls its trigger takes over the pointer
@@ -766,9 +794,60 @@ void openxr_quest_update(bool stereo_frame)
 	prevY = y;
 }
 
+void openxr_quest_draw_radial()
+{
+	if (!radialOpen)
+		return;
+
+	// on the HUD canvas (pixels), centred on the crosshair
+	// a bit above the crosshair so the lower labels stay in the windscreen, off the instrument panel
+	const int cx = gr_screen.max_w / 2, cy = gr_screen.max_h / 2 - static_cast<int>(gr_screen.max_h * 0.06f);
+	// an ellipse: wide enough for the labels, low enough to stay off the instrument panel
+	const float rx = gr_screen.max_h * 0.38f, ry = gr_screen.max_h * 0.21f;
+	const float scale = std::max(1.0f, gr_screen.max_w / 700.0f); // readable text at any render size
+
+	color bg, bgSel, text, textSel, ring;
+	// the HUD layer's alpha comes from brightness (black = see-through), so a dim blue box
+	gr_init_alphacolor(&bg, 40, 70, 130, 255, AC_TYPE_HUD);
+	gr_init_alphacolor(&bgSel, 255, 200, 40, 230, AC_TYPE_HUD);
+	gr_init_alphacolor(&text, 210, 230, 255, 255, AC_TYPE_HUD);
+	gr_init_alphacolor(&textSel, 0, 0, 0, 255, AC_TYPE_HUD);
+	gr_init_alphacolor(&ring, 255, 200, 40, 200, AC_TYPE_HUD);
+
+	gr_set_color_fast(&ring);
+	const int ringD = static_cast<int>(ry * 0.5f);
+	gr_unfilled_circle(cx, cy, ringD, GR_RESIZE_NONE);
+	if (radialSel >= 0) {
+		const float ang = radialSel * (2.0f * PI / RADIAL_COUNT);
+		gr_line(cx + static_cast<int>(ringD * 0.5f * std::sin(ang)), cy - static_cast<int>(ringD * 0.5f * std::cos(ang)),
+			cx + static_cast<int>(rx * 0.7f * std::sin(ang)), cy - static_cast<int>(ry * 0.7f * std::cos(ang)), GR_RESIZE_NONE);
+	}
+
+	for (int i = 0; i < RADIAL_COUNT; i++) {
+		const float ang = i * (2.0f * PI / RADIAL_COUNT);
+		const int x = cx + static_cast<int>(rx * std::sin(ang));
+		const int y = cy - static_cast<int>(ry * std::cos(ang));
+		int w, h;
+		gr_get_string_size(&w, &h, RADIAL_ITEMS[i].label, scale);
+		const int pad = static_cast<int>(6 * scale);
+		const bool sel = i == radialSel;
+		gr_set_color_fast(sel ? &bgSel : &bg);
+		gr_rect(x - w / 2 - pad, y - h / 2 - pad, w + 2 * pad, h + 2 * pad, GR_RESIZE_NONE);
+		gr_set_color_fast(sel ? &textSel : &text);
+		gr_string(static_cast<float>(x - w / 2), static_cast<float>(y - h / 2), RADIAL_ITEMS[i].label, GR_RESIZE_NONE, scale);
+	}
+
+	const char* hint = radialSel >= 0 ? "Release the grip to select" : "Point the left stick";
+	int w, h;
+	gr_get_string_size(&w, &h, hint, scale * 0.8f);
+	gr_set_color_fast(&text);
+	gr_string(static_cast<float>(cx - w / 2), static_cast<float>(cy + ringD / 2 + 6 * scale), hint, GR_RESIZE_NONE, scale * 0.8f);
+}
+
 #else
 
 SCP_vector<const char*> openxr_quest_instance_extensions() { return {}; }
+void openxr_quest_draw_radial() {}
 bool openxr_quest_hud_begin() { return false; }
 float openxr_quest_hud_half_fov() { return 0.0f; }
 void openxr_quest_hud_end() {}

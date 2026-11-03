@@ -80,18 +80,23 @@ in Options > Controls, "Reset to default" restores this layout):
 | X | Next missile type |
 | Y | Next gun type |
 | Left Menu button | Pause menu |
-| Left grip + A | Next target |
-| Left grip + B | Target your target's attacker |
-| Left grip + X | Next subsystem on target |
-| Left grip + Y | Comms menu |
-| Left grip + right grip | Targeting computer on / off |
-| Left grip + left stick up / down / right / left | More power to lasers / shields / engines; balance power |
-| Left grip + right stick right / left | Shields to the front / rear |
-| Left grip + right stick up / down | Full speed / full stop |
-| Left grip + left stick click | Look behind |
-| Left grip + right stick click | Chase view on / off |
+| Left grip (hold) | Radial menu, see below |
 
-While the left grip is held, the sticks don't steer, so a flick only changes power or shields.
+**Radial menu:** hold the left grip and a ring of actions appears around the
+crosshair. Point the left stick at one (it lights up) and let go of the grip to
+use it; let go with the stick centred to close the menu without doing anything.
+The left stick doesn't steer while the menu is open.
+
+| Position | Action |
+|---|---|
+| Top | Shields to the front |
+| 1 - 2 o'clock | Next target, target your target's attacker |
+| 3 o'clock | Next subsystem on target |
+| 4 - 5 o'clock | Targeting computer on / off, comms menu |
+| Bottom | Shields to the rear |
+| 7 - 8 o'clock | Chase view on / off, balance power |
+| 9 o'clock | More power to engines |
+| 10 - 11 o'clock | More power to shields, more power to lasers |
 
 Comms menu open: left stick up/down picks an order, A or a trigger confirms,
 Y closes the menu.

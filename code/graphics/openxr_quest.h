@@ -20,6 +20,8 @@ void openxr_quest_update(bool stereo_frame);
 // begin() returns false when the HUD layer is not available (then draw nothing).
 bool openxr_quest_hud_begin();
 void openxr_quest_hud_end();
+// Flight radial menu (left grip held): draws it on the HUD canvas when open
+void openxr_quest_draw_radial();
 // Half vertical FOV (radians) of the symmetric camera the HUD layer is drawn with (0 = not in VR)
 float openxr_quest_hud_half_fov();
 // The HUD is drawn on a 4:3 canvas (the aspect its gauge layouts are made for), so gauges and

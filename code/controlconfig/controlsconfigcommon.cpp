@@ -1944,13 +1944,20 @@ static void control_config_quest_touch_defaults(CC_preset& preset)
 	button(END_MISSION, SDL_GAMEPAD_BUTTON_MISC3);                          // left stick click held 1 s: warp out
 	button(MATCH_TARGET_SPEED, SDL_GAMEPAD_BUTTON_RIGHT_STICK);             // right stick click
 
-	// Second layer (left grip held)
-	button(TARGET_NEXT, SDL_GAMEPAD_BUTTON_MISC1);                          // grip + A
-	button(TARGET_CLOSEST_SHIP_ATTACKING_TARGET, SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1); // grip + B
-	button(TARGET_NEXT_SUBOBJECT, SDL_GAMEPAD_BUTTON_LEFT_PADDLE1);         // grip + X
-	button(SQUADMSG_MENU, SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2);                // grip + Y
-	button(PADLOCK_DOWN, SDL_GAMEPAD_BUTTON_LEFT_PADDLE2);                  // grip + left stick click (view rear)
-	button(VIEW_CHASE, SDL_GAMEPAD_BUTTON_MISC2);                           // grip + right stick click (chase view)
+	// Radial menu (left grip held, left stick points, release the grip): see RADIAL_ITEMS in
+	// graphics/openxr_quest.cpp, which sends these pad buttons
+	button(TARGET_NEXT, SDL_GAMEPAD_BUTTON_MISC1);
+	button(TARGET_CLOSEST_SHIP_ATTACKING_TARGET, SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1);
+	button(TARGET_NEXT_SUBOBJECT, SDL_GAMEPAD_BUTTON_LEFT_PADDLE1);
+	button(SQUADMSG_MENU, SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2);                // also Y while the comms menu is open
+	button(VIEW_CHASE, SDL_GAMEPAD_BUTTON_MISC2);
+	button(CUSTOM_CONTROL_1, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);             // targeting computer
+	button(INCREASE_WEAPON, SDL_GAMEPAD_BUTTON_MISC4);
+	button(INCREASE_SHIELD, SDL_GAMEPAD_BUTTON_MISC5);
+	button(INCREASE_ENGINE, SDL_GAMEPAD_BUTTON_MISC6);
+	button(ETS_EQUALIZE, SDL_GAMEPAD_BUTTON_TOUCHPAD);
+	button(SHIELD_XFER_TOP, SDL_GAMEPAD_BUTTON_START);                      // shields front
+	button(SHIELD_XFER_BOTTOM, SDL_GAMEPAD_BUTTON_BACK);                    // shields rear
 
 	// Comms menu navigation (sent only while the comms menu is open)
 	button(COMMS_MENU_MOVE_UP, SDL_GAMEPAD_BUTTON_DPAD_UP);
