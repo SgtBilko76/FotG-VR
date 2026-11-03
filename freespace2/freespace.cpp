@@ -4342,8 +4342,6 @@ static void game_render_vr_hud_layer()
 	gr_reset_clip();
 	game_show_time_left();
 	gr_reset_clip();
-	openxr_quest_draw_radial();
-	gr_reset_clip();
 
 	// the death popup goes on this layer too (drawn and processed once per frame, cockpit-fixed),
 	// with the mouse cursor the laser pointer drives (see openxr_quest_update)

@@ -20,8 +20,6 @@ void openxr_quest_update(bool stereo_frame);
 // begin() returns false when the HUD layer is not available (then draw nothing).
 bool openxr_quest_hud_begin();
 void openxr_quest_hud_end();
-// Flight radial menu (left grip held): draws it on the HUD canvas when open
-void openxr_quest_draw_radial();
 // Half vertical FOV (radians) of the symmetric camera the HUD layer is drawn with (0 = not in VR)
 float openxr_quest_hud_half_fov();
 // The HUD is drawn on a 4:3 canvas (the aspect its gauge layouts are made for), so gauges and
@@ -46,6 +44,17 @@ bool openxr_quest_keyboard_render(uint8_t* rgba);
 void openxr_quest_keyboard_pose(float pos[3], float quat[4], float size[2]);
 constexpr int OPENXR_QUEST_KB_W = 1280;
 constexpr int OPENXR_QUEST_KB_H = 496;
+
+// Flight radial menu (left grip held), shown as a small quad above the left controller
+bool openxr_quest_radial_visible();
+// Redraws the menu image (VR_RADIAL_W x VR_RADIAL_H, RGBA8, premultiplied, top row first) when the
+// selection changed or `force`; returns false when the last image is still current
+bool openxr_quest_radial_render(uint8_t* rgba, bool force);
+// Quad pose in the OpenXR app space; false while the left controller isn't tracked
+bool openxr_quest_radial_pose(float pos[3], float quat[4], float size[2]);
+
+// XR_FB_composition_layer_settings is enabled: quad layers may ask for supersampling + sharpening
+bool openxr_quest_has_layer_settings();
 
 // Name of the virtual gamepad (used to auto-select it as Joystick 0)
 extern const char* const OPENXR_QUEST_PAD_NAME;

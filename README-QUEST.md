@@ -82,8 +82,8 @@ in Options > Controls, "Reset to default" restores this layout):
 | Left Menu button | Pause menu |
 | Left grip (hold) | Radial menu, see below |
 
-**Radial menu:** hold the left grip and a ring of actions appears around the
-crosshair. Point the left stick at one (it lights up) and let go of the grip to
+**Radial menu:** hold the left grip and a small ring of actions appears above
+your left controller. Point the left stick at one (it lights up) and let go of the grip to
 use it; let go with the stick centred to close the menu without doing anything.
 The left stick doesn't steer while the menu is open.
 

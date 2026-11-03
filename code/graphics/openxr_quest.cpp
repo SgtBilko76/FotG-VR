@@ -18,6 +18,7 @@ const char* const OPENXR_QUEST_PAD_NAME = "Quest Touch (VR)";
 #include "graphics/2d.h"
 #include "graphics/render.h"
 #include "graphics/openxr_quest_keyboard.h"
+#include "graphics/openxr_quest_radial.h"
 #include "io/key.h"
 #include "io/mouse.h"
 #include "osapi/osapi.h"
@@ -62,23 +63,24 @@ struct RadialItem {
 	SDL_GamepadButton button;
 };
 const RadialItem RADIAL_ITEMS[] = {
-	{ "Shields front", SDL_GAMEPAD_BUTTON_START },
-	{ "Next target", SDL_GAMEPAD_BUTTON_MISC1 },
-	{ "Target attacker", SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1 },
-	{ "Next subsystem", SDL_GAMEPAD_BUTTON_LEFT_PADDLE1 },
-	{ "Targeting computer", SDL_GAMEPAD_BUTTON_LEFT_SHOULDER },
-	{ "Comms menu", SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2 },
-	{ "Shields rear", SDL_GAMEPAD_BUTTON_BACK },
-	{ "Chase view", SDL_GAMEPAD_BUTTON_MISC2 },
-	{ "Balance power", SDL_GAMEPAD_BUTTON_TOUCHPAD },
-	{ "Power: engines", SDL_GAMEPAD_BUTTON_MISC6 },
-	{ "Power: shields", SDL_GAMEPAD_BUTTON_MISC5 },
-	{ "Power: lasers", SDL_GAMEPAD_BUTTON_MISC4 },
+	{ "Shields\nfront", SDL_GAMEPAD_BUTTON_START },
+	{ "Next\ntarget", SDL_GAMEPAD_BUTTON_MISC1 },
+	{ "Target\nattacker", SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1 },
+	{ "Next\nsubsystem", SDL_GAMEPAD_BUTTON_LEFT_PADDLE1 },
+	{ "Targeting\ncomputer", SDL_GAMEPAD_BUTTON_LEFT_SHOULDER },
+	{ "Comms\nmenu", SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2 },
+	{ "Shields\nrear", SDL_GAMEPAD_BUTTON_BACK },
+	{ "Chase\nview", SDL_GAMEPAD_BUTTON_MISC2 },
+	{ "Balance\npower", SDL_GAMEPAD_BUTTON_TOUCHPAD },
+	{ "Power to\nengines", SDL_GAMEPAD_BUTTON_MISC6 },
+	{ "Power to\nshields", SDL_GAMEPAD_BUTTON_MISC5 },
+	{ "Power to\nlasers", SDL_GAMEPAD_BUTTON_MISC4 },
 };
 constexpr int RADIAL_COUNT = static_cast<int>(sizeof(RADIAL_ITEMS) / sizeof(RADIAL_ITEMS[0]));
 bool radialOpen = false, prevRadial = false;
 int radialSel = -1;                       // highlighted item, -1 = none (stick centred)
 int radialPulseItem = -1, radialPulse = 0; // item whose button is held down for a few frames
+int radialDrawnSel = -2;                   // selection in the last uploaded image (-2 = none yet)
 bool prevCommsUp = false, prevCommsDown = false;
 float lastUpdateSeconds = -1.0f;
 // left stick click: tap = autopilot (sent on release), hold = warp out
@@ -458,11 +460,18 @@ void openxr_quest_keyboard_pose(float pos[3], float quat[4], float size[2])
 
 bool hasPerfSettings = false;
 bool hasPicoControllers = false; // XR_BD_controller_interaction (PICO runtimes)
+bool hasLayerSettings = false;   // XR_FB_composition_layer_settings: sharper text on the quad layers
+
+bool openxr_quest_has_layer_settings()
+{
+	return hasLayerSettings;
+}
 
 SCP_vector<const char*> openxr_quest_instance_extensions()
 {
 	// Only request what the runtime offers; an unknown extension fails xrCreateInstance
-	SCP_vector<const char*> wanted = { XR_EXT_PERFORMANCE_SETTINGS_EXTENSION_NAME, "XR_BD_controller_interaction" };
+	SCP_vector<const char*> wanted = { XR_EXT_PERFORMANCE_SETTINGS_EXTENSION_NAME, "XR_BD_controller_interaction",
+		"XR_FB_composition_layer_settings" };
 	SCP_vector<const char*> out;
 
 	uint32_t count = 0;
@@ -479,12 +488,14 @@ SCP_vector<const char*> openxr_quest_instance_extensions()
 					hasPerfSettings = true;
 				else if (!strcmp(w, "XR_BD_controller_interaction"))
 					hasPicoControllers = true;
+				else if (!strcmp(w, "XR_FB_composition_layer_settings"))
+					hasLayerSettings = true;
 				break;
 			}
 		}
 	}
-	QLOG("optional OpenXR extensions: performance_settings %d, PICO controllers %d", hasPerfSettings ? 1 : 0,
-		hasPicoControllers ? 1 : 0);
+	QLOG("optional OpenXR extensions: performance_settings %d, PICO controllers %d, layer settings %d",
+		hasPerfSettings ? 1 : 0, hasPicoControllers ? 1 : 0, hasLayerSettings ? 1 : 0);
 	return out;
 }
 
@@ -752,6 +763,7 @@ void openxr_quest_update(bool stereo_frame)
 		autopilotPulse = warpPulse = 0;
 		radialOpen = prevRadial = false;
 		radialSel = radialPulseItem = -1;
+		radialDrawnSel = -2;
 		radialPulse = 0;
 		setPadNeutral();
 
@@ -794,60 +806,75 @@ void openxr_quest_update(bool stereo_frame)
 	prevY = y;
 }
 
-void openxr_quest_draw_radial()
+bool openxr_quest_radial_visible()
 {
-	if (!radialOpen)
-		return;
+	return radialOpen;
+}
 
-	// on the HUD canvas (pixels), centred on the crosshair
-	// a bit above the crosshair so the lower labels stay in the windscreen, off the instrument panel
-	const int cx = gr_screen.max_w / 2, cy = gr_screen.max_h / 2 - static_cast<int>(gr_screen.max_h * 0.06f);
-	// an ellipse: wide enough for the labels, low enough to stay off the instrument panel
-	const float rx = gr_screen.max_h * 0.38f, ry = gr_screen.max_h * 0.21f;
-	const float scale = std::max(1.0f, gr_screen.max_w / 700.0f); // readable text at any render size
+bool openxr_quest_radial_render(uint8_t* rgba, bool force)
+{
+	if (!force && radialDrawnSel == radialSel)
+		return false;
+	const char* labels[RADIAL_COUNT];
+	for (int i = 0; i < RADIAL_COUNT; i++)
+		labels[i] = RADIAL_ITEMS[i].label;
+	VrRadial_Render(rgba, labels, RADIAL_COUNT, radialSel, 0.0f, 0.0f);
+	radialDrawnSel = radialSel;
+	return true;
+}
 
-	color bg, bgSel, text, textSel, ring;
-	// the HUD layer's alpha comes from brightness (black = see-through), so a dim blue box
-	gr_init_alphacolor(&bg, 40, 70, 130, 255, AC_TYPE_HUD);
-	gr_init_alphacolor(&bgSel, 255, 200, 40, 230, AC_TYPE_HUD);
-	gr_init_alphacolor(&text, 210, 230, 255, 255, AC_TYPE_HUD);
-	gr_init_alphacolor(&textSel, 0, 0, 0, 255, AC_TYPE_HUD);
-	gr_init_alphacolor(&ring, 255, 200, 40, 200, AC_TYPE_HUD);
-
-	gr_set_color_fast(&ring);
-	const int ringD = static_cast<int>(ry * 0.5f);
-	gr_unfilled_circle(cx, cy, ringD, GR_RESIZE_NONE);
-	if (radialSel >= 0) {
-		const float ang = radialSel * (2.0f * PI / RADIAL_COUNT);
-		gr_line(cx + static_cast<int>(ringD * 0.5f * std::sin(ang)), cy - static_cast<int>(ringD * 0.5f * std::cos(ang)),
-			cx + static_cast<int>(rx * 0.7f * std::sin(ang)), cy - static_cast<int>(ry * 0.7f * std::cos(ang)), GR_RESIZE_NONE);
+bool openxr_quest_radial_pose(float pos[3], float quat[4], float size[2])
+{
+	// above the left controller, turned to face the head
+	XrVector3f p;
+	char testProp[PROP_VALUE_MAX] = {};
+	if (__system_property_get("debug.questvr.radial", testProp) > 0) {
+		// test hook (see openxr_quest_update): 45 cm in front of the head, a bit left and down
+		const XrVector3f f = rotate(xr_views[0].pose.orientation, XrVector3f{ -0.12f, -0.08f, -0.45f });
+		p = XrVector3f{ xr_views[0].pose.position.x + f.x, xr_views[0].pose.position.y + f.y, xr_views[0].pose.position.z + f.z };
+	} else {
+		if (aimSpace[LEFT] == XR_NULL_HANDLE)
+			return false;
+		XrSpaceLocation loc{ XR_TYPE_SPACE_LOCATION };
+		if (xrLocateSpace(aimSpace[LEFT], xr_space, xr_state.predictedDisplayTime, &loc) != XR_SUCCESS)
+			return false;
+		if (!(loc.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT))
+			return false;
+		const XrVector3f fwd = rotate(loc.pose.orientation, XrVector3f{ 0.0f, 0.0f, -1.0f });
+		p = XrVector3f{ loc.pose.position.x + fwd.x * 0.04f, loc.pose.position.y + 0.11f, loc.pose.position.z + fwd.z * 0.04f };
 	}
-
-	for (int i = 0; i < RADIAL_COUNT; i++) {
-		const float ang = i * (2.0f * PI / RADIAL_COUNT);
-		const int x = cx + static_cast<int>(rx * std::sin(ang));
-		const int y = cy - static_cast<int>(ry * std::cos(ang));
-		int w, h;
-		gr_get_string_size(&w, &h, RADIAL_ITEMS[i].label, scale);
-		const int pad = static_cast<int>(6 * scale);
-		const bool sel = i == radialSel;
-		gr_set_color_fast(sel ? &bgSel : &bg);
-		gr_rect(x - w / 2 - pad, y - h / 2 - pad, w + 2 * pad, h + 2 * pad, GR_RESIZE_NONE);
-		gr_set_color_fast(sel ? &textSel : &text);
-		gr_string(static_cast<float>(x - w / 2), static_cast<float>(y - h / 2), RADIAL_ITEMS[i].label, GR_RESIZE_NONE, scale);
-	}
-
-	const char* hint = radialSel >= 0 ? "Release the grip to select" : "Point the left stick";
-	int w, h;
-	gr_get_string_size(&w, &h, hint, scale * 0.8f);
-	gr_set_color_fast(&text);
-	gr_string(static_cast<float>(cx - w / 2), static_cast<float>(cy + ringD / 2 + 6 * scale), hint, GR_RESIZE_NONE, scale * 0.8f);
+	const XrVector3f head{ (xr_views[0].pose.position.x + xr_views[1].pose.position.x) * 0.5f,
+		(xr_views[0].pose.position.y + xr_views[1].pose.position.y) * 0.5f,
+		(xr_views[0].pose.position.z + xr_views[1].pose.position.z) * 0.5f };
+	XrVector3f n{ head.x - p.x, head.y - p.y, head.z - p.z };
+	const float len = std::sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
+	if (len < 0.01f)
+		return false;
+	n = XrVector3f{ n.x / len, n.y / len, n.z / len };
+	// quad normal (+z) toward the head: pitch about X, then yaw about Y
+	const float pitch = -std::asin(std::max(-1.0f, std::min(1.0f, n.y)));
+	const float yaw = std::atan2(n.x, n.z);
+	const float sx = std::sin(pitch * 0.5f), cx = std::cos(pitch * 0.5f);
+	const float sy = std::sin(yaw * 0.5f), cy = std::cos(yaw * 0.5f);
+	pos[0] = p.x;
+	pos[1] = p.y;
+	pos[2] = p.z;
+	quat[0] = cy * sx;
+	quat[1] = cx * sy;
+	quat[2] = -sy * sx;
+	quat[3] = cy * cx;
+	size[0] = 0.22f;
+	size[1] = 0.22f * VR_RADIAL_H / VR_RADIAL_W;
+	return true;
 }
 
 #else
 
 SCP_vector<const char*> openxr_quest_instance_extensions() { return {}; }
-void openxr_quest_draw_radial() {}
+bool openxr_quest_radial_visible() { return false; }
+bool openxr_quest_has_layer_settings() { return false; }
+bool openxr_quest_radial_render(uint8_t*, bool) { return false; }
+bool openxr_quest_radial_pose(float[3], float[4], float[2]) { return false; }
 bool openxr_quest_hud_begin() { return false; }
 float openxr_quest_hud_half_fov() { return 0.0f; }
 void openxr_quest_hud_end() {}
