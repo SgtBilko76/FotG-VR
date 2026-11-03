@@ -78,14 +78,20 @@ def main():
         print("needs %.1f GB on the headset, %.1f GB free" % (need / 1e9, free / 1e9))
         if free < need:
             sys.exit("not enough free space on the headset")
-        subprocess.check_call(adb + ["shell", "mkdir", "-p", QUEST_DIR + "/data"])
-        data = os.path.join(out, "data")
-        for d in sorted(os.listdir(data)):
-            print("pushing", d)
-            subprocess.check_call(adb + ["push", os.path.join(data, d), QUEST_DIR + "/data/"])
-        n_pc = sum(len(fs) for _, _, fs in os.walk(out))
-        n_q = subprocess.check_output(adb + ["shell", "find %s -type f | wc -l" % QUEST_DIR]).decode().strip()
-        print("files on PC: %d, on the headset: %s" % (n_pc, n_q))
+        # pack into .vp archives first: thousands of loose files on /sdcard (FUSE) load slowly
+        vpdir = os.path.join(a.dir, "vp")
+        here = os.path.dirname(os.path.abspath(__file__))
+        if not any(f.endswith(".vp") for f in (os.listdir(vpdir) if os.path.isdir(vpdir) else [])):
+            subprocess.check_call([sys.executable, os.path.join(here, "pack_vp.py"), out, vpdir, "--prefix", "fotg"])
+        subprocess.check_call(adb + ["shell", "mkdir", "-p", QUEST_DIR])
+        # loose files from an older install would override the archives; set them aside
+        subprocess.call(adb + ["shell", "[ -d %s/data ] && rm -rf %s_loose_old && mv %s/data %s_loose_old" % ((QUEST_DIR,) * 4)])
+        vps = sorted(f for f in os.listdir(vpdir) if f.endswith(".vp"))
+        for f in vps:
+            print("pushing", f)
+            subprocess.check_call(adb + ["push", os.path.join(vpdir, f), QUEST_DIR + "/"])
+        n_q = subprocess.check_output(adb + ["shell", "ls %s/*.vp | wc -l" % QUEST_DIR]).decode().strip()
+        print("archives on PC: %d, on the headset: %s" % (len(vps), n_q))
     print("done:", out)
 
 
