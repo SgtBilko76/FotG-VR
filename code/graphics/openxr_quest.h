@@ -56,6 +56,9 @@ constexpr int OPENXR_QUEST_KB_H = 496;
 // Flight radial menus (hand 0 = left grip ring, 1 = right grip ring), each shown as a small quad
 // above its controller
 bool openxr_quest_radial_visible(int hand);
+// Training hints: how to do Control_config[control] (or press the raw key `scancode`) on the
+// Touch controllers, e.g. "A" or "Next target (left grip ring)"; nullptr = no equivalent
+const char* openxr_quest_control_hint(int control, int scancode);
 // Redraws the ring image (VR_RADIAL_W x VR_RADIAL_H, RGBA8, premultiplied, top row first) when the
 // selection changed or `force`; returns false when the last image is still current
 bool openxr_quest_radial_render(int hand, uint8_t* rgba, bool force);

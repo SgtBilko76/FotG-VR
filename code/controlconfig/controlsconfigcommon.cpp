@@ -7,6 +7,9 @@
  *
 */
 
+#ifdef __ANDROID__
+#include "graphics/openxr_quest.h"
+#endif
 #include <cstdio>
 #include <cstdarg>
 #include <exception>
@@ -620,12 +623,46 @@ int translate_key_to_index(const char *key, bool find_override)
 	return -1;
 }
 
+#ifdef __ANDROID__
+// "Alt-Q" -> KEY_ALTED | KEY_Q (Scan_code_text_english names); -1 if unknown
+static int key_name_to_scancode(const char *key)
+{
+	int mods = 0;
+	if (!strnicmp(key, "Alt", 3)) {
+		mods |= KEY_ALTED;
+		key += 3;
+		if (*key)
+			key++;
+	}
+	if (!strnicmp(key, "Shift", 5)) {
+		mods |= KEY_SHIFTED;
+		key += 5;
+		if (*key)
+			key++;
+	}
+	const int n = sizeof(Scan_code_text_english) / sizeof(char *);
+	for (int i = 0; i < n && *key; i++)
+		if (!stricmp(key, Scan_code_text_english[i]))
+			return i | mods;
+	return -1;
+}
+#endif
+
 const char *translate_key(char *key)
 {
 	int index = -1;
 	static char text[BTN_MSG_LEN] = {""};
 
 	index = translate_key_to_index(key, false);
+#ifdef __ANDROID__
+	// Quest: name the controller button / radial menu item instead of the keyboard key
+	if (const char *hint = openxr_quest_control_hint(index, key_name_to_scancode(key))) {
+		if (index >= 0)
+			Failed_key_index = index;
+		strcpy_s(text, hint);
+		return text;
+	}
+#endif
 	if (index < 0) {
 		return nullptr;
 	}

@@ -99,12 +99,13 @@ balance power and shields, more power to engines, more power to shields, more
 power to lasers.
 
 Right grip (hold for a moment; a short tap is the S-foils): the number keys 1 - 9
-and 0 (missions ask for them, e.g. "press 1" to answer), Space, mouse mode (N; the
-first training mission asks for it), floodlight and active pause.
+and 0 (missions ask for them, e.g. "press 1" to answer), mouse mode (the first
+training mission asks for it), floodlight, active pause, next turret, escort ship
+and bombs / bombers.
 
-Training missions keep your ship in place until you have done the targeting
-lessons: "Press T" = next target, "H" = A, "Y" = nearest friendly, "V" = next
-subsystem (the hint shows the controller button, e.g. "Device-1 Button 15").
+Mission hints ("Press ...") name the controller button or ring item to use, e.g.
+"Press Next target (left ring)". Training missions keep your ship in place until
+you have done the targeting lessons.
 
 Comms menu open: left stick up/down picks an order, A or a trigger confirms,
 Y closes the menu.

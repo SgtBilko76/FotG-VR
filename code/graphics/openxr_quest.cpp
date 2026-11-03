@@ -19,6 +19,7 @@ const char* const OPENXR_QUEST_PAD_NAME = "Quest Touch (VR)";
 #include "graphics/render.h"
 #include "graphics/openxr_quest_keyboard.h"
 #include "graphics/openxr_quest_radial.h"
+#include "controlconfig/controlsconfig.h"
 #include "io/key.h"
 #include "io/mouse.h"
 #include "osapi/osapi.h"
@@ -92,10 +93,12 @@ const RadialItem RADIAL_RIGHT[] = {
 	{ "8", -1, KEY_8, 0 },
 	{ "9", -1, KEY_9, 0 },
 	{ "0", -1, KEY_0, 0 },
-	{ "Space", -1, KEY_SPACEBAR, 0 },
 	{ "Mouse\nmode", -1, KEY_N, 0 },
 	{ "Flood-\nlight", -1, KEY_O, 0 },
 	{ "Active\npause", -1, KEY_P, 0 },
+	{ "Next\nturret", -1, KEY_B, 0 },
+	{ "Escort\nship", -1, KEY_F, 0 },
+	{ "Bomb /\nbomber", -1, KEY_R, 0 },
 };
 struct Ring {
 	const RadialItem* items;
@@ -930,6 +933,82 @@ void openxr_quest_update(bool stereo_frame)
 	prevY = y;
 }
 
+// How to do a control on the Touch controllers, for the training hints ("Press $T$"): a button
+// name, a radial menu item or a throttle position; nullptr = no controller equivalent.
+const char* openxr_quest_control_hint(int control, int scancode)
+{
+	static SCP_string out;
+	auto ringHint = [](int hand, const RadialItem& it) {
+		out = it.label;
+		// "Flood-\nlight" -> "Floodlight", "Next\ntarget" -> "Next target"
+		SCP_string s;
+		for (char ch : out) {
+			if (ch == '\n' && !s.empty() && s.back() == '-')
+				s.pop_back();
+			else
+				s += (ch == '\n') ? ' ' : ch;
+		}
+		out = s;
+		out += hand == LEFT ? " (left ring)" : " (right ring)";
+		return out.c_str();
+	};
+	if (control >= 0 && control < static_cast<int>(Control_config.size())) {
+		switch (control) {
+		case FORWARD_THRUST: return "right stick up (throttle)";
+		case REVERSE_THRUST: return "right stick down (throttle)";
+		case ZERO_THROTTLE: return "right stick all the way down";
+		case MAX_THROTTLE: return "right stick all the way up";
+		case ONE_THIRD_THROTTLE: return "right stick to one third";
+		case TWO_THIRDS_THROTTLE: return "right stick to two thirds";
+		case END_MISSION: return "left stick click (hold 1 s)";
+		default: break;
+		}
+		const auto& cc = Control_config[control];
+		auto joyBtn = [&cc](int b) {
+			for (const CC_bind* x : { &cc.first, &cc.second })
+				if (x->get_cid() == CID_JOY0 && !(x->get_flags() & CCF_AXIS) && x->get_btn() == b)
+					return true;
+			return false;
+		};
+		auto keyBind = [&cc](int k) {
+			for (const CC_bind* x : { &cc.first, &cc.second })
+				if (x->get_cid() == CID_KEYBOARD && x->get_btn() == k)
+					return true;
+			return false;
+		};
+		static const struct { int btn; const char* name; } direct[] = {
+			{ SDL_GAMEPAD_BUTTON_COUNT + 1, "right trigger" },
+			{ SDL_GAMEPAD_BUTTON_COUNT + 0, "left trigger" },
+			{ SDL_GAMEPAD_BUTTON_SOUTH, "A" },
+			{ SDL_GAMEPAD_BUTTON_EAST, "B" },
+			{ SDL_GAMEPAD_BUTTON_WEST, "X" },
+			{ SDL_GAMEPAD_BUTTON_NORTH, "Y" },
+			{ SDL_GAMEPAD_BUTTON_LEFT_STICK, "left stick click" },
+			{ SDL_GAMEPAD_BUTTON_RIGHT_STICK, "right stick click" },
+			{ SDL_GAMEPAD_BUTTON_MISC3, "left stick click (hold 1 s)" },
+		};
+		for (const auto& d : direct)
+			if (joyBtn(d.btn))
+				return d.name;
+		if (joyBtn(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER))
+			return "right grip (tap)";
+		for (int h = 0; h < 2; h++)
+			for (int i = 0; i < rings[h].count; i++) {
+				const RadialItem& it = rings[h].items[i];
+				if ((it.button >= 0 && joyBtn(it.button)) || (it.key && keyBind(it.key)) || (it.key2 && keyBind(it.key2)))
+					return ringHint(h, it);
+			}
+	}
+	if (scancode > 0)
+		for (int h = 0; h < 2; h++)
+			for (int i = 0; i < rings[h].count; i++) {
+				const RadialItem& it = rings[h].items[i];
+				if (it.key == scancode || it.key2 == scancode)
+					return ringHint(h, it);
+			}
+	return nullptr;
+}
+
 bool openxr_quest_radial_visible(int hand)
 {
 	return rings[hand].open;
@@ -997,6 +1076,7 @@ bool openxr_quest_radial_pose(int hand, float pos[3], float quat[4], float size[
 
 SCP_vector<const char*> openxr_quest_instance_extensions() { return {}; }
 bool openxr_quest_radial_visible(int) { return false; }
+const char* openxr_quest_control_hint(int, int) { return nullptr; }
 bool openxr_quest_has_layer_settings() { return false; }
 void openxr_quest_set_hud_canvas_w(int) {}
 int openxr_quest_hud_canvas_w() { return gr_screen.max_w; }
