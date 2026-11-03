@@ -1,0 +1,138 @@
+{
+ "mod": "FotG_R",
+ "version": "1.1.1",
+ "archives": [
+  {
+   "name": "FG_Core.7z",
+   "size": 944927,
+   "sha256": "9e53fd35aa8434684b411cb4b39af355a28f631ed8b1c9dee2bf149e6b325118",
+   "urls": [
+    "https://cf.fsnebula.org/storage/9e/53/fd35aa8434684b411cb4b39af355a28f631ed8b1c9dee2bf149e6b325118",
+    "https://dl.fsnebula.org/storage/9e/53/fd35aa8434684b411cb4b39af355a28f631ed8b1c9dee2bf149e6b325118",
+    "https://hestia.feralhosting.com/discovery/nebula/9e/53/fd35aa8434684b411cb4b39af355a28f631ed8b1c9dee2bf149e6b325118"
+   ],
+   "unpacked": 9700814,
+   "installed": 9709366
+  },
+  {
+   "name": "FG_Effects.7z",
+   "size": 57511404,
+   "sha256": "4fa67f9d3c8fc74d0085f4c3e73908cc7fd2f56d983407a35676f8ec1512e0bc",
+   "urls": [
+    "https://cf.fsnebula.org/storage/4f/a6/7f9d3c8fc74d0085f4c3e73908cc7fd2f56d983407a35676f8ec1512e0bc",
+    "https://dl.fsnebula.org/storage/4f/a6/7f9d3c8fc74d0085f4c3e73908cc7fd2f56d983407a35676f8ec1512e0bc",
+    "https://hestia.feralhosting.com/discovery/nebula/4f/a6/7f9d3c8fc74d0085f4c3e73908cc7fd2f56d983407a35676f8ec1512e0bc"
+   ],
+   "unpacked": 765135239,
+   "installed": 765365683
+  },
+  {
+   "name": "FG_Maps1.7z",
+   "size": 395065908,
+   "sha256": "77f1252ecb2ced1963c2ebc8b90b6831021d9fb75631efa55a25defcdc5b7562",
+   "urls": [
+    "https://cf.fsnebula.org/storage/77/f1/252ecb2ced1963c2ebc8b90b6831021d9fb75631efa55a25defcdc5b7562",
+    "https://dl.fsnebula.org/storage/77/f1/252ecb2ced1963c2ebc8b90b6831021d9fb75631efa55a25defcdc5b7562",
+    "https://hestia.feralhosting.com/discovery/nebula/77/f1/252ecb2ced1963c2ebc8b90b6831021d9fb75631efa55a25defcdc5b7562"
+   ],
+   "unpacked": 1288410040,
+   "installed": 602650680
+  },
+  {
+   "name": "FG_Maps2.7z",
+   "size": 215465628,
+   "sha256": "59ebc0af52cfc4952abf634797cc575a15ecc7f1e3d7e80bcb6d231a5610f7f4",
+   "urls": [
+    "https://cf.fsnebula.org/storage/59/eb/c0af52cfc4952abf634797cc575a15ecc7f1e3d7e80bcb6d231a5610f7f4",
+    "https://dl.fsnebula.org/storage/59/eb/c0af52cfc4952abf634797cc575a15ecc7f1e3d7e80bcb6d231a5610f7f4",
+    "https://hestia.feralhosting.com/discovery/nebula/59/eb/c0af52cfc4952abf634797cc575a15ecc7f1e3d7e80bcb6d231a5610f7f4"
+   ],
+   "unpacked": 1250544353,
+   "installed": 319417285
+  },
+  {
+   "name": "FG_Maps3.7z",
+   "size": 414260626,
+   "sha256": "208db3ac51a575ef21c5be9a1979e666fb06cdbd0c0926116e87758c829b2ef1",
+   "urls": [
+    "https://cf.fsnebula.org/storage/20/8d/b3ac51a575ef21c5be9a1979e666fb06cdbd0c0926116e87758c829b2ef1",
+    "https://dl.fsnebula.org/storage/20/8d/b3ac51a575ef21c5be9a1979e666fb06cdbd0c0926116e87758c829b2ef1",
+    "https://hestia.feralhosting.com/discovery/nebula/20/8d/b3ac51a575ef21c5be9a1979e666fb06cdbd0c0926116e87758c829b2ef1"
+   ],
+   "unpacked": 1476982188,
+   "installed": 440993824
+  },
+  {
+   "name": "FG_Maps4.7z",
+   "size": 431037596,
+   "sha256": "a548ca69289aeceb8ef268c59a2fb33fb6815a54d63b42dd031d5115cc1c983d",
+   "urls": [
+    "https://cf.fsnebula.org/storage/a5/48/ca69289aeceb8ef268c59a2fb33fb6815a54d63b42dd031d5115cc1c983d",
+    "https://dl.fsnebula.org/storage/a5/48/ca69289aeceb8ef268c59a2fb33fb6815a54d63b42dd031d5115cc1c983d",
+    "https://hestia.feralhosting.com/discovery/nebula/a5/48/ca69289aeceb8ef268c59a2fb33fb6815a54d63b42dd031d5115cc1c983d"
+   ],
+   "unpacked": 1800977544,
+   "installed": 830010220
+  },
+  {
+   "name": "FG_Maps5.7z",
+   "size": 491242041,
+   "sha256": "397020b8f286ae1d70b47471737d74cf3475f00e0c747ae66b922eccf6cf4093",
+   "urls": [
+    "https://cf.fsnebula.org/storage/39/70/20b8f286ae1d70b47471737d74cf3475f00e0c747ae66b922eccf6cf4093",
+    "https://dl.fsnebula.org/storage/39/70/20b8f286ae1d70b47471737d74cf3475f00e0c747ae66b922eccf6cf4093",
+    "https://hestia.feralhosting.com/discovery/nebula/39/70/20b8f286ae1d70b47471737d74cf3475f00e0c747ae66b922eccf6cf4093"
+   ],
+   "unpacked": 1554795434,
+   "installed": 464289610
+  },
+  {
+   "name": "FG_Models.7z",
+   "size": 141793281,
+   "sha256": "769c5a2e3d588a79aec4e977981d91ba94fce7c77b98a99fe997d609dc4259c7",
+   "urls": [
+    "https://cf.fsnebula.org/storage/76/9c/5a2e3d588a79aec4e977981d91ba94fce7c77b98a99fe997d609dc4259c7",
+    "https://dl.fsnebula.org/storage/76/9c/5a2e3d588a79aec4e977981d91ba94fce7c77b98a99fe997d609dc4259c7",
+    "https://hestia.feralhosting.com/discovery/nebula/76/9c/5a2e3d588a79aec4e977981d91ba94fce7c77b98a99fe997d609dc4259c7"
+   ],
+   "unpacked": 669996206,
+   "installed": 670007310
+  },
+  {
+   "name": "FG_Music.7z",
+   "size": 110123152,
+   "sha256": "81bc59039ab1fed4dc6cd437e1435deef4738cfa43aef07891cf5c838a7c8091",
+   "urls": [
+    "https://cf.fsnebula.org/storage/81/bc/59039ab1fed4dc6cd437e1435deef4738cfa43aef07891cf5c838a7c8091",
+    "https://dl.fsnebula.org/storage/81/bc/59039ab1fed4dc6cd437e1435deef4738cfa43aef07891cf5c838a7c8091",
+    "https://hestia.feralhosting.com/discovery/nebula/81/bc/59039ab1fed4dc6cd437e1435deef4738cfa43aef07891cf5c838a7c8091"
+   ],
+   "unpacked": 114624685,
+   "installed": 114628661
+  },
+  {
+   "name": "FG_SndVA.7z",
+   "size": 233215876,
+   "sha256": "8f0cc4f3e3accec8dc0822e287763dcfc3a396d135cc1c533758a57aae44f766",
+   "urls": [
+    "https://cf.fsnebula.org/storage/8f/0c/c4f3e3accec8dc0822e287763dcfc3a396d135cc1c533758a57aae44f766",
+    "https://dl.fsnebula.org/storage/8f/0c/c4f3e3accec8dc0822e287763dcfc3a396d135cc1c533758a57aae44f766",
+    "https://hestia.feralhosting.com/discovery/nebula/8f/0c/c4f3e3accec8dc0822e287763dcfc3a396d135cc1c533758a57aae44f766"
+   ],
+   "unpacked": 276418279,
+   "installed": 276500619
+  },
+  {
+   "name": "FG_UI.7z",
+   "size": 81203470,
+   "sha256": "2ccef370990c6cfe7eb2ff491a179d23e3c8a6abc38d55f9ae78c9f08a85a0d3",
+   "urls": [
+    "https://cf.fsnebula.org/storage/2c/ce/f370990c6cfe7eb2ff491a179d23e3c8a6abc38d55f9ae78c9f08a85a0d3",
+    "https://dl.fsnebula.org/storage/2c/ce/f370990c6cfe7eb2ff491a179d23e3c8a6abc38d55f9ae78c9f08a85a0d3",
+    "https://hestia.feralhosting.com/discovery/nebula/2c/ce/f370990c6cfe7eb2ff491a179d23e3c8a6abc38d55f9ae78c9f08a85a0d3"
+   ],
+   "unpacked": 94610060,
+   "installed": 94764956
+  }
+ ]
+}
