@@ -72,7 +72,7 @@ def main():
 
     if a.push:
         adb = [a.adb] + (["-s", a.serial] if a.serial else [])
-        need = sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(out) for f in fs)
+        need = int(4.6e9)  # packed, with the halved textures
         df = subprocess.check_output(adb + ["shell", "df", "-k", "/sdcard"]).decode().split("\n")
         free = int([l for l in df if l.strip()][-1].split()[3]) * 1024
         print("needs %.1f GB on the headset, %.1f GB free" % (need / 1e9, free / 1e9))
@@ -82,7 +82,10 @@ def main():
         vpdir = os.path.join(a.dir, "vp")
         here = os.path.dirname(os.path.abspath(__file__))
         if not any(f.endswith(".vp") for f in (os.listdir(vpdir) if os.path.isdir(vpdir) else [])):
-            subprocess.check_call([sys.executable, os.path.join(here, "pack_vp.py"), out, vpdir, "--prefix", "fotg"])
+            # halve the big ship / planet textures (8.7 -> 4.2 GB; cockpits stay full size)
+            small = out.rstrip("/") + "_small"
+            subprocess.check_call([sys.executable, os.path.join(here, "shrink_textures.py"), out, small])
+            subprocess.check_call([sys.executable, os.path.join(here, "pack_vp.py"), small, vpdir, "--prefix", "fotg"])
         subprocess.check_call(adb + ["shell", "mkdir", "-p", QUEST_DIR])
         # loose files from an older install would override the archives; set them aside
         subprocess.call(adb + ["shell", "[ -d %s/data ] && rm -rf %s_loose_old && mv %s/data %s_loose_old" % ((QUEST_DIR,) * 4)])
