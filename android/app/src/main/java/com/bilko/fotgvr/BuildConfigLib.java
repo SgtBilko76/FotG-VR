@@ -1,4 +1,4 @@
-package com.bilko.fs2vr;
+package com.bilko.fotgvr;
 
 /** Name of the engine library (lib<ENGINE>.so); written by tools/quest/build_apk.sh. */
 final class BuildConfigLib {

@@ -7,15 +7,15 @@ plugins {
 def questOut = file('../../build/quest')
 
 android {
-    namespace 'com.bilko.fs2vr'
+    namespace 'com.bilko.fotgvr'
     compileSdk 35
 
     defaultConfig {
-        applicationId 'com.bilko.fs2vr'
+        applicationId 'com.bilko.fotgvr'
         minSdk 29
         targetSdk 32
-        versionCode 3
-        versionName '0.1.2-beta'
+        versionCode 1
+        versionName '0.1.0-beta'
         ndk {
             abiFilters 'arm64-v8a'
         }
@@ -25,7 +25,7 @@ android {
         debug {
             // The released APKs are signed with this key; keep it so updates install over
             // older versions. Falls back to the local debug key on other machines.
-            def releaseKey = file(System.getProperty('user.home') + '/.android/keys/fs2vr-release.keystore')
+            def releaseKey = file(System.getProperty('user.home') + '/.android/fotgvr-release.keystore')
             storeFile releaseKey.exists() ? releaseKey : file(System.getProperty('user.home') + '/.android/debug.keystore')
             storePassword 'android'
             keyAlias 'androiddebugkey'

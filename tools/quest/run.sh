@@ -14,7 +14,7 @@ OUT="${TMPDIR:-/tmp}/fs2_quest_$(date +%H%M%S).jpg"
 "$ADB" shell am force-stop $PKG
 "$ADB" logcat -c
 if [ -n "$ARGS" ]; then
-  "$ADB" shell am start -n $ACTIVITY --es fsoArgs "'$ARGS'" >/dev/null
+  "$ADB" shell am start -n $ACTIVITY --es fsoArgs "'$ARGS'" ${GFX+--es fsoGfx "'$GFX'"} >/dev/null
 else
   "$ADB" shell am start -n $ACTIVITY >/dev/null
 fi

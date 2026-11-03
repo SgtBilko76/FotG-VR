@@ -25,7 +25,7 @@ if [ ! -f "$B/build.ninja" ]; then
     -DFSO_BUILD_WITH_OPENGL_ES=ON -DFSO_BUILD_WITH_OPENXR=ON -DFSO_BUILD_WITH_VULKAN=OFF \
     -DFSO_BUILD_QTFRED=OFF -DFSO_RELEASE_LOGGING=ON \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a \
-    -DANDROID_PLATFORM=android-28 -DEMBEDFILE_PATH="$HOST/bin/embedfile"
+    -DANDROID_PLATFORM=android-28 -DFSO_PREBUILT_OVERRIDE="${FSO_PREBUILT_OVERRIDE:-$HOME/tools/fso-prebuilt/android-arm64}" -DEMBEDFILE_PATH="$HOST/bin/embedfile"
 fi
 sed -i 's/-lusb-1.0//g' "$B/build.ninja"
 "$NINJA" -C "$B"
@@ -35,7 +35,7 @@ rm -rf "$OUT/jniLibs"; mkdir -p "$OUT/jniLibs/arm64-v8a"
 STRIP="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
 for so in "$B"/bin/*.so; do "$STRIP" --strip-unneeded -o "$OUT/jniLibs/arm64-v8a/$(basename "$so")" "$so"; done
 ENGINE="$(basename "$(ls "$B"/bin/libfs2_open_*.so | head -1)" .so)"; ENGINE="${ENGINE#lib}"
-sed -i "s/ENGINE = \".*\"/ENGINE = \"$ENGINE\"/" "$ROOT/android/app/src/main/java/com/bilko/fs2vr/BuildConfigLib.java"
+sed -i "s/ENGINE = \".*\"/ENGINE = \"$ENGINE\"/" "$ROOT/android/app/src/main/java/com/bilko/fotgvr/BuildConfigLib.java"
 
 # 4) APK
 cd "$ROOT/android"

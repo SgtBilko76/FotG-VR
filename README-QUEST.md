@@ -1,46 +1,29 @@
-# FreeSpace 2 VR (Meta Quest and PICO)
+# Fate of the Galaxy VR (Meta Quest)
 
-**Download, install guide, controls and pictures: [portroyale.online/freespace2.html](https://portroyale.online/freespace2.html)**
+[Fate of the Galaxy](https://www.moddb.com/games/fate-of-the-galaxy), the free
+Star Wars Original Trilogy total conversion, running natively on the Meta Quest 3,
+built on the [FreeSpace Open](https://github.com/scp-fs2open/fs2open.github.com)
+engine with OpenXR on OpenGL ES. Branch: `fotg-vr`. FreeSpace 2 is not needed.
 
-FreeSpace 2 running natively on the Meta Quest 3, built on the
-[FreeSpace Open](https://github.com/scp-fs2open/fs2open.github.com) engine with
-OpenXR on OpenGL ES. Branch: `fs2-vr`.
-
-The APK contains only the engine. You need your own copy of FreeSpace 2
-([GOG](https://www.gog.com/game/freespace_2) or
-[Steam](https://store.steampowered.com/app/273620/Freespace_2/)); its game files
-(about 1.8 GB) go on the headset.
+The APK contains only the engine. The game data (free, about 2.6 GB download,
+8.7 GB unpacked) comes from the Fate of the Galaxy team's Nebula/Knossos release
+and goes on the headset.
 
 ## Install
 
-1. Install `FreeSpace2-VR-<version>.apk` with SideQuest or `adb install -r -g`.
-2. Copy the game files to the folder `/sdcard/FS2` on the headset:
-   - From an installed game (GOG or Steam install folder on your PC): copy all
-     `.vp` files (`root_fs2.vp`, `smarty_fs2.vp`, `sparky_fs2.vp`,
-     `sparky_hi_fs2.vp`, `stu_fs2.vp`, `tango1_fs2.vp`, `tango2_fs2.vp`,
-     `tango3_fs2.vp`, `warble_fs2.vp`) and the folders `data2` and `data3`
-     (cutscenes) to `/sdcard/FS2` with SideQuest. The app moves the cutscenes
-     into place on the first start.
-   - Or, on a PC with Python 3 and the Quest connected by USB:
-     `python3 tools/quest/get_fs2_data.py <game folder or GOG setup_freespace_2_*.exe> --push`
-     (the GOG offline installer is unpacked with
-     [innoextract](https://constexpr.org/innoextract/)).
-3. Start **FreeSpace 2 VR** from *Unknown Sources* and allow
+1. Install `FotG-VR-<version>.apk` with SideQuest or `adb install -r -g`.
+2. Get the game data into `/sdcard/FotG/FotG_R` on the headset (so that the
+   folder `/sdcard/FotG/FotG_R/data` holds `tables`, `models`, `maps`, ...):
+   - With Python 3, 7-Zip and the Quest connected by USB:
+     `python3 tools/quest/get_fotg_data.py --push`
+     (downloads the newest release from Nebula, checks it and copies it over).
+   - Or install Fate of the Galaxy with Knossos.NET on a PC and copy the
+     contents of its `FotG_R-<version>` folder to `/sdcard/FotG/FotG_R` with
+     SideQuest.
+3. Start **Fate of the Galaxy VR** from *Unknown Sources* and allow
    "access to all files" when asked.
 
-### PICO (untested)
-
-The same APK also runs on PICO 4 / Neo 3 (PICO OS 5.9.0 or newer); the PICO
-controllers use the same button layout as the Touch controllers below. PICO
-support is new and not tested on PICO hardware yet. Install with
-`adb install -r -g` (SideQuest is a Quest tool), copy the game files to
-`/sdcard/FS2` the same way, and allow storage access when the app asks on the
-first start (it restarts by itself afterwards). If it doesn't start or the
-controllers do nothing, `adb logcat -s FS2VR:* QuestVR:*` shows how far it gets.
-
 ## Controls
-
-![FreeSpace 2 VR controller mapping](docs/controls.webp)
 
 Menus, briefings and cutscenes are shown on a large screen in front of you.
 
@@ -88,10 +71,11 @@ Y closes the menu.
 
 Linux host with the Android SDK/NDK: `tools/quest/build_apk.sh --install`.
 `tools/quest/run.sh` launches it on a connected headset and
-`tools/quest/fps_test.sh` flies the first mission and prints the frame rate.
+`tools/quest/mission_test.sh` flies a Rebel mission and prints the frame rate.
 
 ## License
 
 The FreeSpace Open engine is released under the Volition source code license
-(non-commercial use only); see `Copying.md`. FreeSpace 2 game data is not
-included; you need your own copy of the game.
+(non-commercial use only); see `Copying.md`. Fate of the Galaxy is a fan
+project by the Fate of the Galaxy Dev Team, not associated with Lucasfilm or
+Disney; its data is not included in the APK.

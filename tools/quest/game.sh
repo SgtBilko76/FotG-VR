@@ -1,5 +1,5 @@
-# Sourced by the tools/quest scripts: app and data names for FreeSpace 2 VR.
-PKG=com.bilko.fs2vr
-ACTIVITY="$PKG/.FS2Activity"
-DATA_DIR=/sdcard/FS2
-FIRST_MISSION=SM1-01.fs2
+# Sourced by the tools/quest scripts: app and data names for Fate of the Galaxy VR.
+PKG=com.bilko.fotgvr
+ACTIVITY="$PKG/.FotGActivity"
+DATA_DIR=/sdcard/FotG
+FIRST_MISSION=_SPC_R_Exc_m01.fs2
