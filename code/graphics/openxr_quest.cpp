@@ -44,7 +44,7 @@ SDL_Joystick* pad = nullptr;
 
 // previous button states for edge detection
 bool prevTrigger = false;
-bool prevA = false, prevB = false, prevMenu = false;
+bool prevA = false, prevB = false, prevX = false, prevY = false, prevMenu = false;
 int pointerHand = RIGHT;
 
 // keys injected this frame that must be released on the next update
@@ -53,6 +53,10 @@ SCP_vector<int> pendingKeyUps;
 // Throttle lever (0 = stop .. 1 = full), driven by the right stick Y and held where it is left
 float throttleLever = 0.0f;
 bool prevShiftStickUp = false, prevShiftStickDown = false;
+// grip layer flicks (one pad-button pulse per flick): left stick = power, right stick X = shields
+enum { FLICK_WEAPONS, FLICK_SHIELDS, FLICK_ENGINES, FLICK_BALANCE, FLICK_SHIELD_FRONT, FLICK_SHIELD_REAR, FLICK_COUNT };
+bool prevFlick[FLICK_COUNT] = {};
+int flickPulse[FLICK_COUNT] = {};
 bool prevCommsUp = false, prevCommsDown = false;
 float lastUpdateSeconds = -1.0f;
 // left stick click: tap = autopilot (sent on release), hold = warp out
@@ -639,9 +643,9 @@ void openxr_quest_update(bool stereo_frame)
 		prevCommsDown = comms && stL.y < -0.6f;
 
 		if (pad) {
-			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTX, comms ? 0 : axisValue(stL.x));
-			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTY, comms ? 0 : axisValue(-stL.y));
-			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX, axisValue(stR.x));
+			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTX, (comms || shift) ? 0 : axisValue(stL.x));
+			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTY, (comms || shift) ? 0 : axisValue(-stL.y));
+			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX, shift ? 0 : axisValue(stR.x));
 			// absolute throttle axis: up (-32767) = full speed, down (+32767) = stop
 			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTY, axisValue(1.0f - 2.0f * throttleLever));
 			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, comms ? 0 : triggerValue(trigL));
@@ -653,7 +657,7 @@ void openxr_quest_update(bool stereo_frame)
 		btn(SDL_GAMEPAD_BUTTON_EAST, normal && b);
 		btn(SDL_GAMEPAD_BUTTON_WEST, normal && x);
 		btn(SDL_GAMEPAD_BUTTON_NORTH, normal && y);
-		// left stick click: short tap = autopilot, held for WARP_HOLD_SECONDS = warp out
+		// left stick click: short tap = laser fire mode (pad LEFT_STICK), held for WARP_HOLD_SECONDS = hyperspace out
 		if (normal && clickL) {
 			if (clickLDownSince < 0.0f) {
 				clickLDownSince = now;
@@ -674,8 +678,27 @@ void openxr_quest_update(bool stereo_frame)
 		if (warpPulse > 0)
 			warpPulse--;
 		btn(SDL_GAMEPAD_BUTTON_RIGHT_STICK, normal && clickR);
-		btn(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, gripR > 0.5f);
-		btn(SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, false);
+		btn(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, !shift && gripR > 0.5f); // S-foils
+		btn(SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, shift && gripR > 0.5f);   // targeting computer
+
+		// grip layer flicks: left stick up/down/right/left = power to weapons/shields/engines/balance,
+		// right stick right/left = shields front/rear
+		{
+			const bool held[FLICK_COUNT] = { shift && stL.y > 0.7f, shift && stL.y < -0.7f,
+				shift && stL.x > 0.7f, shift && stL.x < -0.7f,
+				shift && stR.x > 0.7f, shift && stR.x < -0.7f };
+			static const SDL_GamepadButton flickBtn[FLICK_COUNT] = { SDL_GAMEPAD_BUTTON_MISC4,
+				SDL_GAMEPAD_BUTTON_MISC5, SDL_GAMEPAD_BUTTON_MISC6, SDL_GAMEPAD_BUTTON_TOUCHPAD,
+				SDL_GAMEPAD_BUTTON_START, SDL_GAMEPAD_BUTTON_BACK };
+			for (int f = 0; f < FLICK_COUNT; f++) {
+				if (held[f] && !prevFlick[f])
+					flickPulse[f] = 2;
+				prevFlick[f] = held[f];
+				btn(flickBtn[f], flickPulse[f] > 0);
+				if (flickPulse[f] > 0)
+					flickPulse[f]--;
+			}
+		}
 
 		// second layer (left grip held)
 		btn(SDL_GAMEPAD_BUTTON_MISC1, shift && a);
@@ -700,6 +723,8 @@ void openxr_quest_update(bool stereo_frame)
 		lastUpdateSeconds = -1.0f;
 		clickLDownSince = -1.0f;
 		autopilotPulse = warpPulse = 0;
+		for (int f = 0; f < FLICK_COUNT; f++)
+			prevFlick[f] = false, flickPulse[f] = 0;
 		setPadNeutral();
 
 		// the hand that pulls its trigger takes over the pointer
@@ -729,9 +754,16 @@ void openxr_quest_update(bool stereo_frame)
 			pressKey(KEY_ENTER);
 		if (b && !prevB)
 			pressKey(KEY_ESC);
+		// Fate of the Galaxy campaign screens: F11 = fleet information, Space = next information page
+		if (x && !prevX)
+			pressKey(KEY_F11);
+		if (y && !prevY)
+			pressKey(KEY_SPACEBAR);
 	}
 	prevA = a;
 	prevB = b;
+	prevX = x;
+	prevY = y;
 }
 
 #else

@@ -47,6 +47,7 @@ Menus, briefings and cutscenes are shown on a large screen in front of you.
 | A | Enter |
 | B / left Menu button | Escape (back / pause) |
 | A, B, Menu or trigger during a cutscene | Skip it |
+| X / Y | F11 / Space: fleet information and its next page (Galactic Civil War campaign) |
 
 Text fields (pilot callsign, chat): a keyboard appears below the menu screen while the
 field is active; point at a key and pull the trigger. Hold Back to keep deleting.
@@ -60,11 +61,11 @@ in Options > Controls, "Reset to default" restores this layout):
 | Right stick left/right | Roll |
 | Right stick up/down | Throttle (stays where you leave it) |
 | Right stick click | Match target speed |
-| Left stick click (tap) | Autopilot |
-| Left stick click (hold 1 s) | Warp out (end mission) |
-| Right trigger | Guns |
-| Left trigger | Missiles |
-| Right grip (hold) | Afterburner |
+| Left stick click (tap) | Laser fire mode (single / linked) |
+| Left stick click (hold 1 s) | Jump to hyperspace (end mission) |
+| Right trigger | Lasers |
+| Left trigger | Missiles / torpedoes |
+| Right grip | S-foils open / closed |
 | A | Target nearest enemy (next ship if there is no enemy) |
 | B | Target ship in crosshair |
 | X | Next missile type |
@@ -74,9 +75,14 @@ in Options > Controls, "Reset to default" restores this layout):
 | Left grip + B | Target your target's attacker |
 | Left grip + X | Next subsystem on target |
 | Left grip + Y | Comms menu |
+| Left grip + right grip | Targeting computer on / off |
+| Left grip + left stick up / down / right / left | More power to lasers / shields / engines; balance power |
+| Left grip + right stick right / left | Shields to the front / rear |
 | Left grip + right stick up / down | Full speed / full stop |
 | Left grip + left stick click | Look behind |
 | Left grip + right stick click | Chase view on / off |
+
+While the left grip is held, the sticks don't steer, so a flick only changes power or shields.
 
 Comms menu open: left stick up/down picks an order, A or a trigger confirms,
 Y closes the menu.
