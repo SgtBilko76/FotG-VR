@@ -40,7 +40,9 @@ below. PICO support is not tested on PICO hardware yet.
 
 The rendering resolution is picked for the headset's chip: 1125 x 1125 per eye on
 XR2 Gen 2 (Quest 3/3S, PICO 4 Ultra), 750 x 750 on XR2 Gen 1 (Quest 2/Pro, PICO 4,
-Neo 3). Change it in Options > Detail > Game VR Resolution (restart needed). If the
+Neo 3). Change it in Options > Detail > Game VR Resolution (restart needed). Menus,
+cutscenes and the HUD are drawn on their own layers at a higher resolution, so their
+text stays sharp whatever this is set to. If the
 game doesn't start or the controllers do nothing,
 `adb logcat -s FotGVR:* QuestVR:*` shows how far it gets.
 
@@ -74,29 +76,33 @@ in Options > Controls, "Reset to default" restores this layout):
 | Left stick click (hold 1 s) | Jump to hyperspace (end mission) |
 | Right trigger | Lasers |
 | Left trigger | Missiles / torpedoes |
-| Right grip | S-foils open / closed |
+| Right grip (tap) | S-foils open / closed |
 | A | Target nearest enemy (next ship if there is no enemy) |
 | B | Target ship in crosshair |
 | X | Next missile type |
 | Y | Next gun type |
 | Left Menu button | Pause menu |
-| Left grip (hold) | Radial menu, see below |
+| Left grip (hold) | Flight radial menu, see below |
+| Right grip (hold) | Keys radial menu (1 - 0 and more), see below |
 
-**Radial menu:** hold the left grip and a small ring of actions appears above
-your left controller. Point the left stick at one (it lights up) and let go of the grip to
-use it; let go with the stick centred to close the menu without doing anything.
-The left stick doesn't steer while the menu is open.
+**Radial menus:** hold a grip and a small ring of actions appears above that
+controller. Point that hand's stick at an action (it lights up) and let go of the
+grip to use it; let go with the stick centred to close the ring without doing
+anything. While a ring is open its stick doesn't fly the ship.
 
-| Position | Action |
-|---|---|
-| Top | Shields to the front |
-| 1 - 2 o'clock | Next target, target your target's attacker |
-| 3 o'clock | Next subsystem on target |
-| 4 - 5 o'clock | Targeting computer on / off, comms menu |
-| Bottom | Shields to the rear |
-| 7 - 8 o'clock | Chase view on / off, balance power |
-| 9 o'clock | More power to engines |
-| 10 - 11 o'clock | More power to shields, more power to lasers |
+Left grip, flight functions (clockwise from the top): shields to the front, next
+target, target your target's attacker, next subsystem, targeting computer on/off,
+nearest friendly, comms menu, shields to the rear, chase view, missile salvo,
+balance power and shields, more power to engines, more power to shields, more
+power to lasers.
+
+Right grip (hold for a moment; a short tap is the S-foils): the number keys 1 - 9
+and 0 (missions ask for them, e.g. "press 1" to answer), Space, mouse mode (N; the
+first training mission asks for it), floodlight and active pause.
+
+Training missions keep your ship in place until you have done the targeting
+lessons: "Press T" = next target, "H" = A, "Y" = nearest friendly, "V" = next
+subsystem (the hint shows the controller button, e.g. "Device-1 Button 15").
 
 Comms menu open: left stick up/down picks an order, A or a trigger confirms,
 Y closes the menu.

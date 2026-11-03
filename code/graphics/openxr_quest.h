@@ -25,6 +25,12 @@ float openxr_quest_hud_half_fov();
 // The HUD is drawn on a 4:3 canvas (the aspect its gauge layouts are made for), so gauges and
 // the crosshair keep their shape: width = eye render width, height = width / this aspect
 constexpr float OPENXR_QUEST_HUD_ASPECT = 4.0f / 3.0f;
+// Width in pixels of the HUD canvas (height = width / OPENXR_QUEST_HUD_ASPECT); larger than the eye
+// images so HUD text stays readable. set(0) picks the size for this headset, set(w) forces one.
+int openxr_quest_hud_canvas_w();
+void openxr_quest_set_hud_canvas_w(int w);
+// Text size factor on the HUD layer (it spans the whole field of view, so small HUD fonts need help)
+float openxr_quest_hud_text_scale();
 // Distance (metres) of the HUD layer in front of the recentred head; far enough that head
 // movement and eye convergence barely shift the reticle against distant targets
 constexpr float OPENXR_QUEST_HUD_DISTANCE = 10.0f;
@@ -45,13 +51,14 @@ void openxr_quest_keyboard_pose(float pos[3], float quat[4], float size[2]);
 constexpr int OPENXR_QUEST_KB_W = 1280;
 constexpr int OPENXR_QUEST_KB_H = 496;
 
-// Flight radial menu (left grip held), shown as a small quad above the left controller
-bool openxr_quest_radial_visible();
-// Redraws the menu image (VR_RADIAL_W x VR_RADIAL_H, RGBA8, premultiplied, top row first) when the
+// Flight radial menus (hand 0 = left grip ring, 1 = right grip ring), each shown as a small quad
+// above its controller
+bool openxr_quest_radial_visible(int hand);
+// Redraws the ring image (VR_RADIAL_W x VR_RADIAL_H, RGBA8, premultiplied, top row first) when the
 // selection changed or `force`; returns false when the last image is still current
-bool openxr_quest_radial_render(uint8_t* rgba, bool force);
-// Quad pose in the OpenXR app space; false while the left controller isn't tracked
-bool openxr_quest_radial_pose(float pos[3], float quat[4], float size[2]);
+bool openxr_quest_radial_render(int hand, uint8_t* rgba, bool force);
+// Quad pose in the OpenXR app space; false while that controller isn't tracked
+bool openxr_quest_radial_pose(int hand, float pos[3], float quat[4], float size[2]);
 
 // XR_FB_composition_layer_settings is enabled: quad layers may ask for supersampling + sharpening
 bool openxr_quest_has_layer_settings();

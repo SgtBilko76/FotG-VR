@@ -4263,25 +4263,54 @@ static bool Game_vr_hud_layer = false;
 // gauge layouts are 4:3 and would otherwise be stretched onto the square eye image.
 // The screen-scale globals FSO resizes 2D drawing with (graphics/2d.cpp); recomputed for the canvas
 // so menu-style UI (the death popup) and the text clipping it relies on match the canvas size
+extern float Gr_save_full_resize_X, Gr_save_full_center_resize_X, Gr_save_resize_X;
+extern float Gr_save_menu_offset_X, Gr_save_menu_zoomed_offset_X;
 extern float Gr_save_full_resize_Y, Gr_save_full_center_resize_Y, Gr_save_resize_Y;
 extern float Gr_save_menu_offset_Y, Gr_save_menu_zoomed_offset_Y;
+extern float Font_vr_hud_scale;
 
 struct vr_hud_canvas {
-	int max_h, max_h_unscaled, max_h_unscaled_zoomed, center_h, center_offset_y;
+	// The HUD layer canvas: openxr_quest_hud_canvas_w() wide (usually larger than the eye images, so
+	// HUD text is readable) and 4:3. Everything the HUD positions and scales by is switched to it.
+	int max_w, max_h, max_h_unscaled, max_h_unscaled_zoomed, center_w, center_h, center_offset_x, center_offset_y;
+	float full_resize_x, full_center_resize_x, resize_x, resize_y, menu_offset_x, menu_zoomed_offset_x;
 	float full_resize_y, full_center_resize_y, menu_offset_y, menu_zoomed_offset_y;
 	vr_hud_canvas()
 	{
+		max_w = gr_screen.max_w;
 		max_h = gr_screen.max_h;
 		max_h_unscaled = gr_screen.max_h_unscaled;
 		max_h_unscaled_zoomed = gr_screen.max_h_unscaled_zoomed;
+		center_w = gr_screen.center_w;
 		center_h = gr_screen.center_h;
+		center_offset_x = gr_screen.center_offset_x;
 		center_offset_y = gr_screen.center_offset_y;
+		full_resize_x = Gr_save_full_resize_X;
+		full_center_resize_x = Gr_save_full_center_resize_X;
+		resize_x = Gr_save_resize_X;
+		resize_y = Gr_save_resize_Y;
+		menu_offset_x = Gr_save_menu_offset_X;
+		menu_zoomed_offset_x = Gr_save_menu_zoomed_offset_X;
 		full_resize_y = Gr_save_full_resize_Y;
 		full_center_resize_y = Gr_save_full_center_resize_Y;
 		menu_offset_y = Gr_save_menu_offset_Y;
 		menu_zoomed_offset_y = Gr_save_menu_zoomed_offset_Y;
 
-		const int h = static_cast<int>(std::lround(gr_screen.max_w / OPENXR_QUEST_HUD_ASPECT));
+		// width: scale everything horizontal (and the uniform resize factors) by the canvas size
+		const int w = openxr_quest_hud_canvas_w();
+		const float k = i2fl(w) / i2fl(gr_screen.max_w);
+		gr_screen.max_w = w;
+		gr_screen.center_w = static_cast<int>(std::lround(gr_screen.center_w * k));
+		gr_screen.center_offset_x = static_cast<int>(std::lround(gr_screen.center_offset_x * k));
+		Gr_save_full_resize_X *= k;
+		Gr_save_full_center_resize_X *= k;
+		Gr_save_resize_X *= k;
+		Gr_save_resize_Y *= k;
+		Gr_save_menu_offset_X *= k;
+		Gr_save_menu_zoomed_offset_X *= k;
+
+		// height: 4:3
+		const int h = static_cast<int>(std::lround(w / OPENXR_QUEST_HUD_ASPECT));
 		gr_screen.max_h = h;
 		gr_screen.max_h_unscaled = static_cast<int>(std::lround(gr_screen.max_w_unscaled / OPENXR_QUEST_HUD_ASPECT));
 		gr_screen.max_h_unscaled_zoomed = static_cast<int>(std::lround(gr_screen.max_w_unscaled_zoomed / OPENXR_QUEST_HUD_ASPECT));
@@ -4293,14 +4322,25 @@ struct vr_hud_canvas {
 		gr_reset_screen_scale();
 		gr_reset_clip();
 		gr_setup_viewport();
+		Font_vr_hud_scale = openxr_quest_hud_text_scale();
 	}
 	~vr_hud_canvas()
 	{
+		Font_vr_hud_scale = 1.0f;
+		gr_screen.max_w = max_w;
 		gr_screen.max_h = max_h;
 		gr_screen.max_h_unscaled = max_h_unscaled;
 		gr_screen.max_h_unscaled_zoomed = max_h_unscaled_zoomed;
+		gr_screen.center_w = center_w;
 		gr_screen.center_h = center_h;
+		gr_screen.center_offset_x = center_offset_x;
 		gr_screen.center_offset_y = center_offset_y;
+		Gr_save_full_resize_X = full_resize_x;
+		Gr_save_full_center_resize_X = full_center_resize_x;
+		Gr_save_resize_X = resize_x;
+		Gr_save_resize_Y = resize_y;
+		Gr_save_menu_offset_X = menu_offset_x;
+		Gr_save_menu_zoomed_offset_X = menu_zoomed_offset_x;
 		Gr_save_full_resize_Y = full_resize_y;
 		Gr_save_full_center_resize_Y = full_center_resize_y;
 		Gr_save_menu_offset_Y = menu_offset_y;

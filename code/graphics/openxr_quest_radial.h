@@ -9,8 +9,8 @@
 #include <stdint.h>
 
 enum {
-	VR_RADIAL_W = 1280,
-	VR_RADIAL_H = 800,
+	VR_RADIAL_W = 1600,
+	VR_RADIAL_H = 1000,
 };
 
 /* Draws `count` labels (a '\n' splits a label into two lines) clockwise from the

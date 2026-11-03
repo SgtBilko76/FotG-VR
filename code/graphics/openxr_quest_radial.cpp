@@ -126,7 +126,7 @@ void VrRadial_Render(uint8_t* rgba, const char* const* labels, int count, int se
 
 	const float cx = VR_RADIAL_W * 0.5f, cy = VR_RADIAL_H * 0.5f;
 	/* ellipse through the label centres: wide enough that neighbouring labels don't touch */
-	const float rx = 505.0f, ry = 310.0f;
+	const float rx = 650.0f, ry = 390.0f;
 	r_disc(rgba, cx, cy, ry * 0.55f, 0.0f, panel);
 
 	const int padX = 16, padY = 10;

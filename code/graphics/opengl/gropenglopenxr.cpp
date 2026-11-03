@@ -365,6 +365,11 @@ static XrSwapchain xr_hud_swapchain = XR_NULL_HANDLE;
 static SCP_vector<XrSwapchainImageGL> xr_hud_images;
 static uint32_t xr_hud_w = 0, xr_hud_h = 0;
 static bool xr_hud_ready = false; // the HUD image was written for the current frame
+// The HUD is drawn into its own, larger canvas (openxr_quest_hud_canvas_w() wide) instead of the
+// eye-sized back buffer, so its text stays readable: while it is drawn, Back_framebuffer points at
+// this framebuffer (render-to-texture code rebinds "the back buffer" when it is done).
+static GLuint xr_hud_fbo = 0, xr_hud_color = 0, xr_hud_depth = 0;
+static GLuint xr_hud_saved_back = 0;
 static constexpr float XR_HUD_DISTANCE = OPENXR_QUEST_HUD_DISTANCE; // metres
 
 // Half vertical field of view (radians) of the symmetric camera the HUD is drawn with. FSO's
@@ -380,9 +385,52 @@ float openxr_quest_hud_half_fov() {
 	return std::atan(std::tan(std::max(h, v)) / OPENXR_QUEST_HUD_ASPECT);
 }
 
+static void openxr_create_hud_canvas() {
+	glGenTextures(1, &xr_hud_color);
+	GL_state.Texture.SetActiveUnit(0);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+	GL_state.Texture.Enable(xr_hud_color);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, xr_hud_w, xr_hud_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+	glGenTextures(1, &xr_hud_depth);
+	GL_state.Texture.Enable(xr_hud_depth);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, xr_hud_w, xr_hud_h, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
+	GL_state.Texture.Enable(0);
+
+	glGenFramebuffers(1, &xr_hud_fbo);
+	GL_state.PushFramebufferState();
+	GL_state.BindFrameBuffer(xr_hud_fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, xr_hud_color, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, xr_hud_depth, 0);
+	const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	GL_state.PopFramebufferState();
+	if (status != GL_FRAMEBUFFER_COMPLETE) {
+		mprintf(("OpenXR: HUD canvas framebuffer incomplete (0x%x), drawing the HUD at eye resolution\n", status));
+		glDeleteFramebuffers(1, &xr_hud_fbo);
+		glDeleteTextures(1, &xr_hud_color);
+		glDeleteTextures(1, &xr_hud_depth);
+		xr_hud_fbo = xr_hud_color = xr_hud_depth = 0;
+		openxr_quest_set_hud_canvas_w(gr_screen.max_w);
+	}
+}
+
 static bool openxr_create_hud_swapchain() {
-	xr_hud_w = static_cast<uint32_t>(gr_screen.max_w);
-	xr_hud_h = static_cast<uint32_t>(std::lround(gr_screen.max_w / OPENXR_QUEST_HUD_ASPECT));
+	openxr_quest_set_hud_canvas_w(0); // pick the size for this headset
+	xr_hud_w = static_cast<uint32_t>(openxr_quest_hud_canvas_w());
+	xr_hud_h = static_cast<uint32_t>(std::lround(xr_hud_w / OPENXR_QUEST_HUD_ASPECT));
+	openxr_create_hud_canvas();
+	if (xr_hud_fbo == 0) {
+		xr_hud_w = static_cast<uint32_t>(gr_screen.max_w);
+		xr_hud_h = static_cast<uint32_t>(std::lround(gr_screen.max_w / OPENXR_QUEST_HUD_ASPECT));
+	}
 	XrSwapchainCreateInfo info{ XR_TYPE_SWAPCHAIN_CREATE_INFO };
 	info.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT;
 	info.format = xr_swapchains[0]->format;
@@ -410,6 +458,21 @@ bool openxr_quest_hud_begin() {
 	if (!openxr_enabled() || xr_hud_swapchain == XR_NULL_HANDLE || xr_stage != OpenXRFBStage::FIRST)
 		return false;
 
+	if (xr_hud_fbo) {
+		// Draw the HUD alone into the (cleared, transparent) HUD canvas, which stands in for the back buffer
+		xr_hud_saved_back = Back_framebuffer;
+		Back_framebuffer = xr_hud_fbo;
+		GL_state.BindFrameBuffer(xr_hud_fbo);
+		glViewport(0, 0, xr_hud_w, xr_hud_h);
+		GL_state.ScissorTest(GL_FALSE);
+		GL_state.ColorMask(true, true, true, true);
+		GL_state.DepthMask(GL_TRUE);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClearDepthf(1.0f);
+		glClearStencil(0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		return true;
+	}
 	// Draw the HUD alone into the (cleared, transparent) back buffer
 	GL_state.BindFrameBuffer(Back_framebuffer);
 	glViewport(0, 0, gr_screen.max_w, gr_screen.max_h);
@@ -421,6 +484,10 @@ bool openxr_quest_hud_begin() {
 }
 
 void openxr_quest_hud_end() {
+	if (xr_hud_fbo) {
+		Back_framebuffer = xr_hud_saved_back;
+		GL_state.BindFrameBuffer(Back_framebuffer);
+	}
 	uint32_t index = 0;
 	XrSwapchainImageAcquireInfo acquireInfo{ XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
 	if (xrAcquireSwapchainImage(xr_hud_swapchain, &acquireInfo, &index) != XR_SUCCESS)
@@ -443,10 +510,12 @@ void openxr_quest_hud_end() {
 	GL_state.StencilTest(GL_FALSE);
 
 	opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_COPY, SDR_FLAG_COPY_CLAMP01 | SDR_FLAG_COPY_LUMA_ALPHA));
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Back_texture);
+	GL_state.Texture.Enable(0, GL_TEXTURE_2D, xr_hud_fbo ? xr_hud_color : Back_texture);
 	Current_shader->program->Uniforms.setTextureUniform("tex", 0);
-	// the HUD canvas is the bottom xr_hud_h rows of the back buffer (GL origin bottom-left)
-	opengl_draw_full_screen_textured(0.0f, 0.0f, 1.0f, i2fl(xr_hud_h) / i2fl(gr_screen.max_h));
+	if (xr_hud_fbo)
+		opengl_draw_full_screen_textured(0.0f, 0.0f, 1.0f, 1.0f);
+	else // the HUD canvas is the bottom xr_hud_h rows of the back buffer (GL origin bottom-left)
+		opengl_draw_full_screen_textured(0.0f, 0.0f, 1.0f, i2fl(xr_hud_h) / i2fl(gr_screen.max_h));
 
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 0, 0);
 	glDrawBuffer(GL_NONE);
@@ -500,7 +569,8 @@ struct CpuQuad {
 	SCP_vector<uint8_t> pixels;
 };
 static CpuQuad xr_kb_quad{ "keyboard", OPENXR_QUEST_KB_W, OPENXR_QUEST_KB_H };
-static CpuQuad xr_radial_quad{ "radial menu", VR_RADIAL_W, VR_RADIAL_H };
+static CpuQuad xr_radial_quad[2] = { { "left radial menu", VR_RADIAL_W, VR_RADIAL_H },
+	{ "right radial menu", VR_RADIAL_W, VR_RADIAL_H } };
 
 static bool openxr_create_cpu_quad(CpuQuad& q) {
 	XrSwapchainCreateInfo info{ XR_TYPE_SWAPCHAIN_CREATE_INFO };
@@ -917,8 +987,8 @@ bool gr_opengl_openxr_flip() {
 	};
 	auto pLayer = (const XrCompositionLayerBaseHeader*)&layer;
 #ifdef __ANDROID__
-	XrCompositionLayerQuad hudQuad{}, screenQuad{}, kbQuad{}, radialQuad{};
-	const XrCompositionLayerBaseHeader* layers[5] = { pLayer, nullptr, nullptr, nullptr, nullptr };
+	XrCompositionLayerQuad hudQuad{}, screenQuad{}, kbQuad{}, radialQuad[2]{};
+	const XrCompositionLayerBaseHeader* layers[6] = { pLayer, nullptr, nullptr, nullptr, nullptr, nullptr };
 	uint32_t layerCount = 1;
 	if (xr_screen_ready) {
 		screenQuad = openxr_screen_layer();
@@ -937,13 +1007,13 @@ bool gr_opengl_openxr_flip() {
 		kbQuad = openxr_cpu_quad_layer(xr_kb_quad, pos, quat, size);
 		layers[layerCount++] = (const XrCompositionLayerBaseHeader*)&kbQuad;
 	}
-	{
+	for (int hand = 0; hand < 2; hand++) {
 		float pos[3], quat[4], size[2];
-		const bool posed = openxr_quest_radial_visible() && openxr_quest_radial_pose(pos, quat, size);
-		if (openxr_update_cpu_quad(xr_radial_quad, posed,
-				[](uint8_t* px, bool force) { return openxr_quest_radial_render(px, force); })) {
-			radialQuad = openxr_cpu_quad_layer(xr_radial_quad, pos, quat, size);
-			layers[layerCount++] = (const XrCompositionLayerBaseHeader*)&radialQuad;
+		const bool posed = openxr_quest_radial_visible(hand) && openxr_quest_radial_pose(hand, pos, quat, size);
+		if (openxr_update_cpu_quad(xr_radial_quad[hand], posed,
+				[hand](uint8_t* px, bool force) { return openxr_quest_radial_render(hand, px, force); })) {
+			radialQuad[hand] = openxr_cpu_quad_layer(xr_radial_quad[hand], pos, quat, size);
+			layers[layerCount++] = (const XrCompositionLayerBaseHeader*)&radialQuad[hand];
 		}
 	}
 #endif
