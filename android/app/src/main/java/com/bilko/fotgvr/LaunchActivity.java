@@ -13,7 +13,7 @@ public class LaunchActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        boolean install = InstallActivity.needsInstall();
+        boolean install = InstallActivity.needsInstall(this);
         Log.i("FotGVR", install ? "game data missing: opening the installer" : "starting the game");
         Intent next = new Intent(this, install ? InstallActivity.class : FotGActivity.class);
         Intent src = getIntent();

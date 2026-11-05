@@ -68,11 +68,98 @@ public class InstallActivity extends Activity {
         return sHasLegacyAccess; // Android 10 (PICO OS 5): checked in refresh()
     }
 
-    /** True while the data is missing or an install was started and not finished. */
-    static boolean needsInstall() {
+    /** True while the data is missing, damaged, or an install was started and not finished. */
+    static boolean needsInstall(Context ctx) {
         if (!hasFileAccess()) return true;
         if (sInstaller != null && sInstaller.isRunning()) return true;
-        return stateDir().exists() || !hasGameData();
+        if (stateDir().exists() || !hasGameData()) return true;
+        Damage d = checkData(ctx);
+        String desc = d.describe();
+        if (!d.isEmpty() && !desc.equals(sLastDamage)) Log.w(TAG, "game data damaged: " + desc);
+        sLastDamage = desc;
+        return !d.isEmpty();
+    }
+
+    private static String sLastDamage = "";
+
+    /** What checkData found: installer archives to fetch again, and other .vp files that are broken. */
+    static final class Damage {
+        final List<DataInstaller.Archive> repair = new ArrayList<>();
+        final List<DataInstaller.Archive> intact = new ArrayList<>();
+        final List<String> foreign = new ArrayList<>();
+        boolean isEmpty() { return repair.isEmpty() && foreign.isEmpty(); }
+        String describe() {
+            StringBuilder sb = new StringBuilder();
+            for (DataInstaller.Archive a : repair) sb.append(sb.length() > 0 ? ", " : "").append(stem(a));
+            for (String f : foreign) sb.append(sb.length() > 0 ? ", " : "").append(f);
+            return sb.toString();
+        }
+    }
+
+    static String stem(DataInstaller.Archive a) {
+        return a.name.endsWith(".7z") ? a.name.substring(0, a.name.length() - 3) : a.name;
+    }
+
+    /** A .vp is whole when its directory (at diroffset, 44 bytes per entry) ends exactly at the end of the file. */
+    static boolean vpIntact(File f) {
+        try (java.io.RandomAccessFile r = new java.io.RandomAccessFile(f, "r")) {
+            long len = r.length();
+            if (len < 16) return false;
+            byte[] h = new byte[16];
+            r.readFully(h);
+            java.nio.ByteBuffer b = java.nio.ByteBuffer.wrap(h).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+            if (b.getInt(0) != 0x50565056) return false; // "VPVP"
+            long dirOff = b.getInt(8) & 0xffffffffL, entries = b.getInt(12) & 0xffffffffL;
+            return dirOff >= 16 && dirOff + 44 * entries == len;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Checks the .vp archives in the mod folder: every installer archive (fotg_FG_*.vp, made by
+     * this installer) must be there, whole and not smaller than installed; other .vp files (made by
+     * get_fotg_data.py on a PC) must be whole. Loose files (a Knossos copy) can't be checked here;
+     * if they are incomplete, the engine's error ends on the error panel (ErrorActivity).
+     */
+    static Damage checkData(Context ctx) {
+        Damage d = new Damage();
+        File[] files = modDir().listFiles((dir, n) -> n.toLowerCase(Locale.ROOT).endsWith(".vp"));
+        if (files == null || files.length == 0) return d;
+        List<DataInstaller.Archive> archives;
+        try {
+            archives = loadArchives(ctx);
+        } catch (Exception e) {
+            Log.e(TAG, "cannot read the archive list", e);
+            return d;
+        }
+        boolean installerSet = false;
+        for (File f : files)
+            if (f.getName().startsWith(DataInstaller.PREFIX + "FG_")) installerSet = true;
+        java.util.Set<String> claimed = new java.util.HashSet<>();
+        for (DataInstaller.Archive a : archives) {
+            String base = DataInstaller.PREFIX + stem(a);
+            long sum = 0;
+            boolean whole = true;
+            int parts = 0;
+            for (File f : files) {
+                String n = f.getName();
+                boolean mine = n.equals(base + ".vp")
+                        || (n.startsWith(base + "_") && n.endsWith(".vp")
+                            && n.substring(base.length() + 1, n.length() - 3).matches("\\d+"));
+                if (!mine) continue;
+                claimed.add(n);
+                parts++;
+                sum += f.length();
+                if (!vpIntact(f)) whole = false;
+            }
+            if (!installerSet) continue;
+            if (parts == 0 || !whole || sum < a.installed) d.repair.add(a);
+            else d.intact.add(a);
+        }
+        for (File f : files)
+            if (!claimed.contains(f.getName()) && !vpIntact(f)) d.foreign.add(f.getName());
+        return d;
     }
 
     /** Game data present: the installer's / install script's .vp archives, or loose files (Knossos copy). */
@@ -152,8 +239,8 @@ public class InstallActivity extends Activity {
         mHandler.removeCallbacks(mTick);
     }
 
-    private List<DataInstaller.Archive> loadArchives() throws Exception {
-        try (InputStream in = getAssets().open("fotg_data.json")) {
+    static List<DataInstaller.Archive> loadArchives(Context ctx) throws Exception {
+        try (InputStream in = ctx.getAssets().open("fotg_data.json")) {
             java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
             byte[] b = new byte[8192];
             int n;
@@ -220,26 +307,56 @@ public class InstallActivity extends Activity {
             });
             return;
         }
-        if ((inst != null && inst.phase == DataInstaller.DONE) || !needsInstall()) {
+        if (mDeleting) {
+            mBody.setText("Deleting the old game data ...");
+            mBar.setVisibility(ProgressBar.INVISIBLE);
+            mDetail.setText("");
+            mButton.setVisibility(Button.GONE);
+            return;
+        }
+        if ((inst != null && inst.phase == DataInstaller.DONE) || !needsInstall(this)) {
             startGame();
             return;
         }
 
         List<DataInstaller.Archive> archives;
         try {
-            archives = loadArchives();
+            archives = loadArchives(this);
         } catch (Exception e) {
             mBody.setText("Internal error: " + e);
             return;
         }
-        long total = 0, installed = 0;
-        for (DataInstaller.Archive a : archives) { total += a.size; installed += a.installed > 0 ? a.installed : a.unpacked; }
-        long need = DataInstaller.spaceNeeded(archives, stateDir());
-        long free = new StatFs(Environment.getExternalStorageDirectory().getPath()).getAvailableBytes();
         boolean resume = stateDir().exists();
+        Damage damage = (resume || (inst != null && inst.phase == DataInstaller.FAILED)) ? new Damage() : checkData(this);
+        if (!damage.foreign.isEmpty()) {
+            // a broken archive that this installer did not make: start over with a fresh download
+            mBody.setText("Some of the game data in /sdcard/FotG/FotG_R is damaged (" + damage.describe()
+                    + "), probably from a copy that did not finish.\n\n"
+                    + "Press the button to delete the game data and download it again (needs Wi-Fi). "
+                    + "Your pilot and saved progress are kept.");
+            mBar.setVisibility(ProgressBar.INVISIBLE);
+            mDetail.setText("");
+            setButton("Delete game data and download it again", new Runnable() {
+                @Override public void run() { deleteGameData(); }
+            });
+            return;
+        }
+        final boolean repair = !damage.repair.isEmpty();
+        final List<DataInstaller.Archive> intact = damage.intact;
+        List<DataInstaller.Archive> todo = repair ? damage.repair : archives;
+        long total = 0, installed = 0;
+        for (DataInstaller.Archive a : todo) { total += a.size; installed += a.installed > 0 ? a.installed : a.unpacked; }
+        long need = DataInstaller.spaceNeeded(todo, stateDir());
+        long free = new StatFs(Environment.getExternalStorageDirectory().getPath()).getAvailableBytes();
+        for (DataInstaller.Archive a : damage.repair) free += existingSize(a); // replaced by the repair
 
         StringBuilder sb = new StringBuilder();
-        if (inst != null && inst.phase == DataInstaller.FAILED) {
+        if (repair) {
+            sb.append("Part of the game data is missing or damaged (").append(damage.describe())
+              .append("), for example from an installation or copy that did not finish. The game can't start without it.\n\n")
+              .append("Press Repair to download just these parts again: ").append(gb(total))
+              .append(". Keep the headset on and connected to Wi-Fi until the game starts.\n\n");
+        } else if (inst != null && inst.phase == DataInstaller.FAILED) {
             sb.append("The installation stopped: ").append(inst.error).append("\n\n")
               .append("Check the Wi-Fi connection and press Retry. It continues where it stopped.\n\n");
         } else if (resume) {
@@ -261,12 +378,58 @@ public class InstallActivity extends Activity {
             mButton.setVisibility(Button.GONE);
             return;
         }
-        String label = (inst != null && inst.phase == DataInstaller.FAILED) ? "Retry"
+        String label = repair ? "Repair (" + gb(total) + ")"
+                : (inst != null && inst.phase == DataInstaller.FAILED) ? "Retry"
                 : resume ? "Continue installation" : "Download and install (" + gb(total) + ")";
         final List<DataInstaller.Archive> list = archives;
         setButton(label, new Runnable() {
-            @Override public void run() { startInstall(list); }
+            @Override public void run() {
+                if (repair) markDone(intact); // an interrupted repair then resumes without them
+                startInstall(list);
+            }
         });
+    }
+
+    private static long existingSize(DataInstaller.Archive a) {
+        long sum = 0;
+        File[] files = modDir().listFiles((d, n) -> n.startsWith(DataInstaller.PREFIX + stem(a) + ".vp")
+                || n.startsWith(DataInstaller.PREFIX + stem(a) + "_"));
+        if (files != null) for (File f : files) sum += f.length();
+        return sum;
+    }
+
+    /** Pre-marks archives as installed in the state folder so DataInstaller skips them. */
+    private static void markDone(List<DataInstaller.Archive> intact) {
+        File st = stateDir();
+        st.mkdirs();
+        for (DataInstaller.Archive a : intact) {
+            try {
+                new File(st, a.name + ".done").createNewFile();
+            } catch (java.io.IOException e) {
+                Log.w(TAG, "cannot mark " + a.name, e);
+            }
+        }
+    }
+
+    private static volatile boolean mDeleting;
+
+    private void deleteGameData() {
+        if (mDeleting) return;
+        mDeleting = true;
+        refresh();
+        new Thread(new Runnable() {
+            @Override public void run() {
+                Log.i(TAG, "deleting " + modDir());
+                deleteTree(modDir());
+                mDeleting = false;
+            }
+        }, "FotGDelete").start();
+    }
+
+    static void deleteTree(File f) {
+        File[] kids = f.isDirectory() ? f.listFiles() : null;
+        if (kids != null) for (File k : kids) deleteTree(k);
+        f.delete();
     }
 
     private void setButton(String label, final Runnable action) {
