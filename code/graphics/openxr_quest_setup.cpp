@@ -3,7 +3,6 @@
 #include "graphics/openxr_quest_keyboard.h"
 #include "graphics/openxr_quest_keyboard_font.h"
 
-#include <stdio.h>
 #include <string.h>
 
 /* Rasterizer (premultiplied RGBA8), same look as the keyboard and the radial menus */
@@ -106,120 +105,6 @@ int VrSetup_ButtonAt(float u, float v)
 		if (x >= BTN_X[b][0] && x < BTN_X[b][1])
 			return b;
 	return VR_SETUP_NONE;
-}
-
-namespace {
-
-// comms panel geometry (pixels)
-const int CM_TOP = 72, CM_ROW_H = 64, CM_GAP = 6;
-const int CM_COL_X[2][2] = { { 24, 632 }, { 648, 1256 } };
-const int CM_BTN_Y0 = 404, CM_BTN_Y1 = 480;
-const int CM_BTN_X[3][2] = { { 24, 424 }, { 440, 840 }, { 856, 1256 } }; // prev, next, close
-
-void cm_item_rect(int i, int& x0, int& y0, int& x1, int& y1)
-{
-	const int col = i / 5, row = i % 5;
-	x0 = CM_COL_X[col][0];
-	x1 = CM_COL_X[col][1];
-	y0 = CM_TOP + row * CM_ROW_H;
-	y1 = y0 + CM_ROW_H - CM_GAP;
-}
-
-// text cut to max_w pixels (with "..")
-void s_fit(const char* in, char* out, size_t outsz, int max_w)
-{
-	if (out != in) {
-		strncpy(out, in, outsz - 1);
-		out[outsz - 1] = '\0';
-	}
-	size_t n = strlen(out);
-	if (s_text_width(out) <= max_w)
-		return;
-	while (n > 0) {
-		out[--n] = '\0';
-		char tmp[256];
-		snprintf(tmp, sizeof(tmp), "%s..", out);
-		if (s_text_width(tmp) <= max_w) {
-			strncpy(out, tmp, outsz - 1);
-			out[outsz - 1] = '\0';
-			return;
-		}
-	}
-}
-
-// left-aligned text, vertically centred on cy
-void s_text_left(uint8_t* img, const char* text, int x, int cy, SRgba c)
-{
-	s_text(img, text, x + s_text_width(text) / 2, cy, c);
-}
-
-} // namespace
-
-int VrComms_ButtonAt(float u, float v, int count, int has_prev, int has_next)
-{
-	const int x = (int)(u * W), y = (int)(v * H);
-	for (int i = 0; i < count && i < VR_COMMS_MAX; i++) {
-		int x0, y0, x1, y1;
-		cm_item_rect(i, x0, y0, x1, y1);
-		if (x >= x0 && x < x1 && y >= y0 && y < y1)
-			return i;
-	}
-	if (y >= CM_BTN_Y0 && y < CM_BTN_Y1) {
-		if (has_prev && x >= CM_BTN_X[0][0] && x < CM_BTN_X[0][1])
-			return VR_COMMS_PREV;
-		if (has_next && x >= CM_BTN_X[1][0] && x < CM_BTN_X[1][1])
-			return VR_COMMS_NEXT;
-		if (x >= CM_BTN_X[2][0] && x < CM_BTN_X[2][1])
-			return VR_COMMS_CLOSE;
-	}
-	return VR_SETUP_NONE;
-}
-
-void VrComms_Render(uint8_t* rgba, const char* title, const char* const* labels, const int* active, int count,
-	int has_prev, int has_next, int hover0, int hover1)
-{
-	static const SRgba panel   = { 12, 16, 24, 225 };
-	static const SRgba item    = { 40, 52, 72, 245 };
-	static const SRgba itemOff = { 28, 34, 44, 235 };
-	static const SRgba itemHov = { 255, 200, 40, 255 };
-	static const SRgba text    = { 235, 240, 250, 255 };
-	static const SRgba dim     = { 120, 128, 140, 255 };
-	static const SRgba textSel = { 20, 20, 25, 255 };
-
-	memset(rgba, 0, (size_t)W * H * 4);
-	s_round_rect(rgba, 0, 0, W, H, 28, panel);
-	char buf[256];
-	snprintf(buf, sizeof(buf), "Comms: %s", title && title[0] ? title : "Message What");
-	s_fit(buf, buf, sizeof(buf), W - 60);
-	s_text(rgba, buf, W / 2, 38, text);
-
-	int shown = 0;
-	for (int i = 0; i < count && i < VR_COMMS_MAX; i++) {
-		if (active[i] < 0)
-			continue;
-		int x0, y0, x1, y1;
-		cm_item_rect(i, x0, y0, x1, y1);
-		const bool hov = active[i] > 0 && (i == hover0 || i == hover1);
-		s_round_rect(rgba, x0, y0, x1, y1, 16, hov ? itemHov : (active[i] > 0 ? item : itemOff));
-		char label[256];
-		snprintf(label, sizeof(label), "%d. %s", (i + 1) % VR_COMMS_MAX, labels[i]);
-		s_fit(label, label, sizeof(label), x1 - x0 - 36);
-		s_text_left(rgba, label, x0 + 18, (y0 + y1) / 2, hov ? textSel : (active[i] > 0 ? text : dim));
-		shown++;
-	}
-	if (shown == 0)
-		s_text(rgba, "Nothing to order right now", W / 2, CM_TOP + 2 * CM_ROW_H, dim);
-
-	const char* names[3] = { "< Previous", "More >", "Close" };
-	const int ids[3] = { VR_COMMS_PREV, VR_COMMS_NEXT, VR_COMMS_CLOSE };
-	const int on[3] = { has_prev, has_next, 1 };
-	for (int b = 0; b < 3; b++) {
-		if (!on[b])
-			continue;
-		const bool hov = ids[b] == hover0 || ids[b] == hover1;
-		s_round_rect(rgba, CM_BTN_X[b][0], CM_BTN_Y0, CM_BTN_X[b][1], CM_BTN_Y1, 16, hov ? itemHov : item);
-		s_text(rgba, names[b], (CM_BTN_X[b][0] + CM_BTN_X[b][1]) / 2, (CM_BTN_Y0 + CM_BTN_Y1) / 2, hov ? textSel : text);
-	}
 }
 
 void VrSetup_Render(uint8_t* rgba, int active, int hover0, int hover1)

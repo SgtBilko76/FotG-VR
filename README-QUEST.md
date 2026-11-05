@@ -87,7 +87,7 @@ Jet stick layout; Classic swaps the two sticks (see below):
 | Y | Next gun type |
 | Left Menu button | Pause menu (tap) / controller setup: stick layout (hold) |
 | Left grip (hold) | Flight radial menu, see below |
-| Right grip (hold) | Keys radial menu (1 - 0 and more), see below |
+| Right grip (hold) | Comms ring: wingmen orders and mission answers, see below |
 
 **Radial menus:** hold a grip and a small ring of actions appears above that
 controller. Point that hand's stick at an action (it lights up) and let go of the
@@ -100,18 +100,21 @@ nearest friendly, comms menu, shields to the rear, chase view, missile salvo,
 balance power and shields, more power to engines, more power to shields, more
 power to lasers.
 
-Right grip (hold for a moment; a short tap is the S-foils): the number keys 1 - 9
-and 0 (missions ask for them, e.g. "press 1" to answer), mouse mode (the first
-training mission asks for it), floodlight, active pause, next turret, escort ship
-and bombs / bombers.
+Right grip (hold for a moment; a short tap is the S-foils): the **comms ring**. It
+opens the comms menu and shows its first level (ships, wings, all fighters,
+reinforcements, rearm / repair, abort rearm) plus *Answer 1-9*. Point the right
+stick and let go of the grip: the next level (the ship or wing list, then the
+orders) stays above your hand until you hold the grip again. Let go with the stick
+centred to close the comms menu. *Answer 1-9* makes the next ring show 1 - 9, for
+mission dialogues that ask you to press a number. Greyed-out entries can't be used
+right now.
 
 Mission hints ("Press ...") name the controller button or ring item to use, e.g.
 "Press Next target (left ring)". Training missions keep your ship in place until
 you have done the targeting lessons.
 
-Comms menu open: a *Comms* panel with the menu's entries appears in front of you. Point at
-an entry with either controller and pull the trigger (*More >* / *< Previous* turn the page,
-*Close* closes it). The left stick up/down + A and Y (close) still work too.
+Comms menu open: the right grip ring (above) is the easiest way; left stick
+up/down + A and Y (close) still work too.
 
 **Stick layout:** in flight, hold the left Menu button for a moment and a *VR controller
 setup* panel opens in front of you. Point at **Jet** (right stick flies, left stick is the

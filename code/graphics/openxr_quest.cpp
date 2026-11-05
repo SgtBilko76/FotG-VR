@@ -89,24 +89,6 @@ const RadialItem RADIAL_LEFT[] = {
 	{ "Power to\nshields", SDL_GAMEPAD_BUTTON_MISC5, 0, 0 },
 	{ "Power to\nlasers", SDL_GAMEPAD_BUTTON_MISC4, 0, 0 },
 };
-const RadialItem RADIAL_RIGHT[] = {
-	{ "1", -1, KEY_1, 0 },
-	{ "2", -1, KEY_2, 0 },
-	{ "3", -1, KEY_3, 0 },
-	{ "4", -1, KEY_4, 0 },
-	{ "5", -1, KEY_5, 0 },
-	{ "6", -1, KEY_6, 0 },
-	{ "7", -1, KEY_7, 0 },
-	{ "8", -1, KEY_8, 0 },
-	{ "9", -1, KEY_9, 0 },
-	{ "0", -1, KEY_0, 0 },
-	{ "Mouse\nmode", -1, KEY_N, 0 },
-	{ "Flood-\nlight", -1, KEY_O, 0 },
-	{ "Active\npause", -1, KEY_P, 0 },
-	{ "Next\nturret", -1, KEY_B, 0 },
-	{ "Escort\nship", -1, KEY_F, 0 },
-	{ "Bomb /\nbomber", -1, KEY_R, 0 },
-};
 struct Ring {
 	const RadialItem* items;
 	int count;
@@ -115,18 +97,24 @@ struct Ring {
 	int sel = -1;           // highlighted item, -1 = none (stick centred)
 	int pulseItem = -1, pulse = 0; // item whose pad button is held down for a few frames
 	int drawnSel = -2;      // selection in the last uploaded image (-2 = none yet)
+	int gen = 0, drawnGen = -1; // contents version (the right ring is rebuilt from the comms menu)
+	const int* dim = nullptr;    // per item: greyed out
 };
-Ring rings[2] = { { RADIAL_LEFT, static_cast<int>(sizeof(RADIAL_LEFT) / sizeof(RADIAL_LEFT[0])) },
-	{ RADIAL_RIGHT, static_cast<int>(sizeof(RADIAL_RIGHT) / sizeof(RADIAL_RIGHT[0])) } };
+Ring rings[2] = { { RADIAL_LEFT, static_cast<int>(sizeof(RADIAL_LEFT) / sizeof(RADIAL_LEFT[0])) }, { nullptr, 0 } };
 constexpr float RIGHT_RING_DELAY = 0.35f; // right grip held this long opens the ring; shorter = S-foils
 float gripRDownSince = -1.0f;
 int sfoilPulse = 0;
 
 void pressKey(int key);
+void commsRingReset();
 
 // stick direction -> ring item (keeps the last one while the stick is between centre and the rim)
 void ringSelect(Ring& r, const XrVector2f& st)
 {
+	if (r.count <= 0) {
+		r.sel = -1;
+		return;
+	}
 	const float mag = std::sqrt(st.x * st.x + st.y * st.y);
 	if (mag > 0.5f) {
 		float ang = std::atan2(st.x, st.y); // clockwise from straight up
@@ -167,6 +155,136 @@ void ringsReset()
 	}
 	gripRDownSince = -1.0f;
 	sfoilPulse = 0;
+	commsRingReset();
+}
+
+// Right grip ring = the comms menu, one level per grip press: hold the right grip (the comms
+// menu opens), point the right stick, release. The next level (ship / wing list, orders) is then
+// shown above the hand until the next press; releasing with the stick centred closes the menu.
+// Level 1 also has "Answer 1-9" (mission dialogues): the next press shows 1 - 9, which type
+// the number keys. Items are picked with Hud_set_lua_key (MsgItems index), so it works whatever
+// page the HUD gauge shows and while FotG's comms pause is on.
+constexpr int RING_MAX = 16;
+constexpr int RI_ANSWER = -2, RI_MORE = -3;
+bool numMode = false;          // the next right ring is 1 - 9
+bool rightPreview = false;     // comms level shown above the hand while the grip is up
+int commsOffset = 0;           // first MsgItems entry shown when a level has more than fits
+SCP_string rightLabels[RING_MAX];
+RadialItem rightItems[RING_MAX];
+int rightIndex[RING_MAX];  // MsgItems index, 1-9 in number mode, RI_ANSWER, RI_MORE
+int rightDim[RING_MAX];
+SCP_string rightSig;           // contents of the built ring
+const int NUMBER_KEYS[9] = { KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9 };
+
+void commsRingReset()
+{
+	numMode = rightPreview = false;
+	commsOffset = 0;
+}
+
+// "Destroy my target" -> "Destroy my\ntarget" (two lines for long entries)
+SCP_string ringLabel(const SCP_string& in)
+{
+	SCP_string s = in;
+	if (s.size() > 22)
+		s = s.substr(0, 21) + ".";
+	if (s.size() <= 11)
+		return s;
+	size_t best = SCP_string::npos;
+	for (size_t i = 0; i < s.size(); i++)
+		if (s[i] == ' ' && (best == SCP_string::npos || std::abs((int)i - (int)s.size() / 2) < std::abs((int)best - (int)s.size() / 2)))
+			best = i;
+	if (best != SCP_string::npos)
+		s[best] = '\n';
+	return s;
+}
+
+// fills rings[RIGHT] from the comms menu (or 1 - 9); comms = the game's comms menu is open
+void commsRingBuild(bool comms)
+{
+	int n = 0;
+	SCP_string sig;
+	auto add = [&n, &sig](const SCP_string& label, int index, int dimmed) {
+		rightLabels[n] = ringLabel(label);
+		rightIndex[n] = index;
+		rightDim[n] = dimmed;
+		rightItems[n] = RadialItem{ rightLabels[n].c_str(), -1, 0, 0 };
+		sig += label + (dimmed ? "~|" : "|");
+		n++;
+	};
+	if (numMode) {
+		for (int k = 1; k <= 9; k++)
+			add(std::to_string(k), k, 0);
+	} else if (comms && hud_squadmsg_items_ready()) {
+		const bool level1 = Squad_msg_mode == SM_MODE_TYPE_SELECT;
+		SCP_vector<int> vis;
+		for (int i = 0; i < static_cast<int>(MsgItems.size()); i++)
+			if (MsgItems[i].active >= 0)
+				vis.push_back(i);
+		const int room = RING_MAX - (level1 ? 1 : 0);
+		const bool more = static_cast<int>(vis.size()) > room;
+		const int shown = more ? room - 1 : static_cast<int>(vis.size());
+		if (!more || commsOffset >= static_cast<int>(vis.size()))
+			commsOffset = 0;
+		for (int j = 0; j < shown && commsOffset + j < static_cast<int>(vis.size()); j++) {
+			const int i = vis[commsOffset + j];
+			add(MsgItems[i].text, i, MsgItems[i].active == 0);
+		}
+		if (more)
+			add("More...", RI_MORE, 0);
+		if (level1)
+			add("Answer 1-9", RI_ANSWER, 0);
+		sig = SCP_string(Squad_msg_title) + "#" + sig;
+	}
+	Ring& r = rings[RIGHT];
+	r.items = rightItems;
+	r.count = n;
+	r.dim = rightDim;
+	if (sig != rightSig) {
+		rightSig = sig;
+		r.gen++;
+		if (r.sel >= n)
+			r.sel = -1;
+		if (n > 0)
+			QLOG("right ring: %s", sig.c_str());
+	}
+}
+
+// right grip released with the ring open: run the highlighted entry
+void commsRingRelease(bool comms)
+{
+	Ring& r = rings[RIGHT];
+	if (r.prevOpen && !r.open) {
+		if (r.sel < 0 || r.sel >= r.count) {
+			if (numMode)
+				numMode = false;
+			else if (comms)
+				hud_squadmsg_toggle();
+			QLOG("right ring: closed");
+		} else {
+			const int idx = rightIndex[r.sel];
+			if (numMode) {
+				numMode = false;
+				pressKey(NUMBER_KEYS[idx - 1]);
+				QLOG("right ring: key %d", idx);
+			} else if (idx == RI_ANSWER) {
+				if (comms)
+					hud_squadmsg_toggle();
+				numMode = true;
+			} else if (idx == RI_MORE) {
+				commsOffset += r.count - 1 - (Squad_msg_mode == SM_MODE_TYPE_SELECT ? 1 : 0);
+			} else if (comms && idx >= 0 && idx < static_cast<int>(MsgItems.size()) && MsgItems[idx].active > 0) {
+				QLOG("right ring: picked '%s' (%s)", MsgItems[idx].text.c_str(), Squad_msg_title);
+				Hud_set_lua_key(idx);
+				commsOffset = 0;
+			} else {
+				gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
+			}
+		}
+	}
+	if (!r.open)
+		r.sel = -1;
+	r.prevOpen = r.open;
 }
 bool prevCommsUp = false, prevCommsDown = false;
 float lastUpdateSeconds = -1.0f;
@@ -557,14 +675,11 @@ void setupOpen(float trigL, float trigR)
 	QLOG("controller setup panel opened");
 }
 
-bool cmDirty = true;
-
 void setupClose(const char* why)
 {
 	if (suVisible)
 		QLOG("controller setup panel closed (%s)", why);
 	suVisible = false;
-	cmDirty = true; // the comms panel may be on the quad again
 }
 
 // laser + trigger on the open panel (either hand)
@@ -589,98 +704,6 @@ void setupInput(float trigL, float trigR)
 	}
 }
 
-// Comms panel: while the squad message (comms) menu is open in flight, its items are shown on a
-// panel in front of the player (same quad and place as the setup panel). Laser + trigger of either
-// hand picks an item, pages, or closes the menu; the left stick + A still work as well. A trigger
-// pulled on the panel doesn't fire until it is released.
-bool cmVisible = false;
-int cmHover[2] = { VR_SETUP_NONE, VR_SETUP_NONE };
-bool cmTrig[2] = { false, false };
-bool trigEaten[2] = { false, false }; // this trigger press belonged to a panel: no fire until released
-SCP_string cmDrawn;                   // what the shown image holds
-struct CommsPage {
-	SCP_string title;
-	SCP_string labels[VR_COMMS_MAX];
-	int active[VR_COMMS_MAX] = {};
-	int count = 0, first = 0;
-	bool prev = false, next = false;
-};
-CommsPage cmPage;
-
-void commsHide()
-{
-	if (cmVisible)
-		QLOG("comms panel hidden");
-	cmVisible = false;
-}
-
-void commsUpdate(float trigL, float trigR)
-{
-	if (!cmVisible) {
-		kbPos = XrVector3f{ xr_offset.xyz.x, xr_offset.xyz.y - 0.3f, -xr_offset.xyz.z - 1.1f };
-		const float half = -20.0f * 0.5f * 3.14159265f / 180.0f;
-		kbQuat = XrQuaternionf{ std::sin(half), 0.0f, 0.0f, std::cos(half) };
-		cmHover[LEFT] = cmHover[RIGHT] = VR_SETUP_NONE;
-		cmTrig[LEFT] = trigL > 0.4f; // a trigger already held (it picked the ring item) doesn't click
-		cmTrig[RIGHT] = trigR > 0.4f;
-		cmVisible = cmDirty = true;
-		QLOG("comms panel shown");
-	}
-	if (!hud_squadmsg_items_ready())
-		return;
-
-	// the menu's current page
-	CommsPage pg;
-	pg.title = Squad_msg_title;
-	pg.first = hud_squadmsg_first_menu_item();
-	const int total = static_cast<int>(MsgItems.size());
-	pg.count = std::max(0, std::min(static_cast<int>(VR_COMMS_MAX), total - pg.first));
-	for (int i = 0; i < pg.count; i++) {
-		pg.labels[i] = MsgItems[pg.first + i].text;
-		pg.active[i] = MsgItems[pg.first + i].active;
-	}
-	pg.prev = pg.first > 0;
-	pg.next = pg.first + VR_COMMS_MAX < total;
-
-	const float trig[2] = { trigL, trigR };
-	for (int h = 0; h < 2; h++) {
-		float u, v;
-		const int hover = keyboardHit(h, u, v) ? VrComms_ButtonAt(u, v, pg.count, pg.prev, pg.next) : VR_SETUP_NONE;
-		cmHover[h] = hover;
-		if (hover != VR_SETUP_NONE)
-			hud_squadmsg_keep_open(); // aiming at the panel keeps the menu open
-		const bool down = trig[h] > (cmTrig[h] ? 0.4f : 0.6f);
-		if (down && !cmTrig[h] && hover != VR_SETUP_NONE) {
-			trigEaten[h] = true;
-			if (hover == VR_COMMS_CLOSE) {
-				QLOG("comms panel: close");
-				hud_squadmsg_toggle();
-			} else if (hover == VR_COMMS_PREV) {
-				hud_squadmsg_page_up();
-			} else if (hover == VR_COMMS_NEXT) {
-				hud_squadmsg_page_down();
-			} else if (pg.active[hover] > 0) {
-				QLOG("comms panel: picked '%s' (%s)", pg.labels[hover].c_str(), pg.title.c_str());
-				Hud_set_lua_key(pg.first + hover);
-			} else {
-				gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
-			}
-		}
-		cmTrig[h] = down;
-	}
-
-	// redraw only when something visible changed
-	SCP_string key = pg.title + '|' + std::to_string(pg.first) + '|' + std::to_string(pg.prev) + std::to_string(pg.next) + '|' +
-		std::to_string(cmHover[LEFT]) + ',' + std::to_string(cmHover[RIGHT]);
-	for (int i = 0; i < pg.count; i++)
-		key += '|' + pg.labels[i] + ':' + std::to_string(pg.active[i]);
-	if (key != cmDrawn) {
-		cmDrawn = key;
-		cmDirty = true;
-	}
-	cmPage = pg;
-}
-
 } // namespace
 
 void openxr_quest_text_field_active()
@@ -692,26 +715,16 @@ void openxr_quest_text_field_active()
 
 bool openxr_quest_keyboard_visible()
 {
-	return kbVisible || suVisible || cmVisible;
+	return kbVisible || suVisible;
 }
 
 bool openxr_quest_keyboard_render(uint8_t* rgba)
 {
-	if (!kbVisible && suVisible) { // the controller setup panel on the keyboard's quad
+	if (!kbVisible) { // the controller setup panel on the keyboard's quad
 		if (!suDirty)
 			return false;
 		VrSetup_Render(rgba, sticks(), suHover[LEFT], suHover[RIGHT]);
 		suDirty = false;
-		return true;
-	}
-	if (!kbVisible) { // the comms panel
-		if (!cmDirty)
-			return false;
-		const char* labels[VR_COMMS_MAX];
-		for (int i = 0; i < VR_COMMS_MAX; i++)
-			labels[i] = cmPage.labels[i].c_str();
-		VrComms_Render(rgba, cmPage.title.c_str(), labels, cmPage.active, cmPage.count, cmPage.prev, cmPage.next, cmHover[LEFT], cmHover[RIGHT]);
-		cmDirty = false;
 		return true;
 	}
 	if (!kbDirty)
@@ -992,8 +1005,6 @@ void openxr_quest_update(bool stereo_frame)
 			autopilotPulse = warpPulse = 0;
 			setPadNeutral();
 			setupInput(trigL, trigR);
-			trigEaten[LEFT] = trigEaten[LEFT] || trigL > 0.4f;
-			trigEaten[RIGHT] = trigEaten[RIGHT] || trigR > 0.4f;
 			if (b && !prevB)
 				setupClose("B");
 			if (prevTrigger) {
@@ -1003,32 +1014,32 @@ void openxr_quest_update(bool stereo_frame)
 		} else {
 			const bool shift = gripL > 0.5f;
 			const bool comms = Player && (Player->flags & PLAYER_FLAGS_MSG_MODE);
-			if (comms)
-				commsUpdate(trigL, trigR);
-			else
-				commsHide();
-			// a trigger press that clicked a panel stays muted until it is released
-			if (trigL < 0.3f)
-				trigEaten[LEFT] = false;
-			if (trigR < 0.3f)
-				trigEaten[RIGHT] = false;
 			auto btn = [](SDL_GamepadButton b, bool down) {
 				if (pad)
 					SDL_SetJoystickVirtualButton(pad, b, down);
 			};
 
-			// right grip: short tap = S-foils, held = right ring (the right stick then picks, not flies)
-			const bool gripRHeld = gripR > 0.5f && !comms;
+			// right grip: short tap = S-foils, held = comms ring (the right stick then picks, not flies)
+			const bool gripRHeld = gripR > 0.5f;
 			if (gripRHeld) {
 				if (gripRDownSince < 0.0f)
 					gripRDownSince = now;
+				const bool wasOpen = rings[RIGHT].open;
 				rings[RIGHT].open = now - gripRDownSince >= RIGHT_RING_DELAY;
+				if (rings[RIGHT].open && !wasOpen && !numMode && !comms) {
+					commsOffset = 0;
+					hud_squadmsg_toggle(); // open the comms menu: its first level fills the ring
+				}
+				if (rings[RIGHT].open)
+					hud_squadmsg_keep_open();
 			} else {
-				if (gripRDownSince >= 0.0f && !rings[RIGHT].open)
+				if (gripRDownSince >= 0.0f && !rings[RIGHT].open && !comms && !numMode)
 					sfoilPulse = 2;
 				gripRDownSince = -1.0f;
 				rings[RIGHT].open = false;
 			}
+			commsRingBuild(comms || rings[RIGHT].open);
+			rightPreview = !rings[RIGHT].open && (numMode || comms) && rings[RIGHT].count > 0;
 
 			// left ring: open while the left grip is held (not while the comms menu is up)
 			const bool radial = shift && !comms;
@@ -1055,7 +1066,23 @@ void openxr_quest_update(bool stereo_frame)
 			if (rings[RIGHT].open)
 				ringSelect(rings[RIGHT], stR);
 			ringRelease(rings[LEFT]);
-			ringRelease(rings[RIGHT]);
+			commsRingRelease(comms);
+			{
+				// test hook: `adb shell setprop debug.questvr.comms open` opens the comms menu, `... <n>`
+				// picks MsgItems entry n (as the ring does); acts once per new value. See the log (right ring: ...).
+				static SCP_string lastComms;
+				char v[PROP_VALUE_MAX] = {};
+				__system_property_get("debug.questvr.comms", v);
+				if (lastComms != v) {
+					lastComms = v;
+					if (!strcmp(v, "open") && !comms)
+						hud_squadmsg_toggle();
+					else if (v[0] >= '0' && v[0] <= '9' && comms) {
+						QLOG("comms test hook: pick %d", atoi(v));
+						Hud_set_lua_key(atoi(v));
+					}
+				}
+			}
 			{
 				// test hook: `adb shell setprop debug.questvr.radial <item>` (left ring) or `r<item>` (right
 				// ring) shows that ring with the item highlighted (-1 = none); `setprop debug.questvr.radial ""`
@@ -1071,7 +1098,7 @@ void openxr_quest_update(bool stereo_frame)
 				}
 			}
 
-			// comms menu open: left stick up/down moves the selection, A picks it (triggers: comms panel)
+			// comms menu open: left stick up/down moves the selection, a trigger or A picks it
 			bool commsUp = false, commsDown = false;
 			if (comms) {
 				commsUp = stL.y > 0.6f && !prevCommsUp;
@@ -1087,8 +1114,8 @@ void openxr_quest_update(bool stereo_frame)
 				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX, thrBusy ? 0 : axisValue(thrStick.x));
 				// absolute throttle axis: up (-32767) = full speed, down (+32767) = stop
 				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTY, axisValue(1.0f - 2.0f * throttleLever));
-				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, (comms || trigEaten[LEFT]) ? 0 : triggerValue(trigL));
-				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, (comms || trigEaten[RIGHT]) ? 0 : triggerValue(trigR));
+				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, comms ? 0 : triggerValue(trigL));
+				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, comms ? 0 : triggerValue(trigR));
 			}
 
 			const bool normal = !comms;
@@ -1138,7 +1165,7 @@ void openxr_quest_update(bool stereo_frame)
 			// comms menu
 			btn(SDL_GAMEPAD_BUTTON_DPAD_UP, commsUp);
 			btn(SDL_GAMEPAD_BUTTON_DPAD_DOWN, commsDown);
-			btn(SDL_GAMEPAD_BUTTON_DPAD_RIGHT, comms && a); // triggers pick on the comms panel
+			btn(SDL_GAMEPAD_BUTTON_DPAD_RIGHT, comms && (a || trigL > 0.6f || trigR > 0.6f));
 
 			if (prevTrigger) {
 				mouse_mark_button(MOUSE_LEFT_BUTTON, 0);
@@ -1148,7 +1175,6 @@ void openxr_quest_update(bool stereo_frame)
 		kbVisible = false;
 	} else {
 		// Menus: neutral pad, laser pointer drives the mouse
-		commsHide();
 		lastUpdateSeconds = -1.0f;
 		boostArmed = false;
 		clickLDownSince = -1.0f;
@@ -1223,6 +1249,7 @@ const char* openxr_quest_control_hint(int control, int scancode)
 		case ONE_THIRD_THROTTLE: out = SCP_string(throttleStickName()) + " to one third"; return out.c_str();
 		case TWO_THIRDS_THROTTLE: out = SCP_string(throttleStickName()) + " to two thirds"; return out.c_str();
 		case END_MISSION: return "left stick click (hold 1 s)";
+		case SQUADMSG_MENU: return "right grip (hold): comms ring";
 		default: break;
 		}
 		const auto& cc = Control_config[control];
@@ -1261,6 +1288,11 @@ const char* openxr_quest_control_hint(int control, int scancode)
 					return ringHint(h, it);
 			}
 	}
+	for (int k = 0; k < 9; k++)
+		if (scancode == NUMBER_KEYS[k]) {
+			out = "Answer 1-9 > " + std::to_string(k + 1) + " (right ring)";
+			return out.c_str();
+		}
 	if (scancode > 0)
 		for (int h = 0; h < 2; h++)
 			for (int i = 0; i < rings[h].count; i++) {
@@ -1273,19 +1305,20 @@ const char* openxr_quest_control_hint(int control, int scancode)
 
 bool openxr_quest_radial_visible(int hand)
 {
-	return rings[hand].open;
+	return rings[hand].open || (hand == RIGHT && rightPreview);
 }
 
 bool openxr_quest_radial_render(int hand, uint8_t* rgba, bool force)
 {
 	Ring& r = rings[hand];
-	if (!force && r.drawnSel == r.sel)
+	if (!force && r.drawnSel == r.sel && r.drawnGen == r.gen)
 		return false;
 	const char* labels[32];
 	for (int i = 0; i < r.count && i < 32; i++)
 		labels[i] = r.items[i].label;
-	VrRadial_Render(rgba, labels, std::min(r.count, 32), r.sel, 0.0f, 0.0f);
+	VrRadial_RenderDim(rgba, labels, r.dim, std::min(r.count, 32), r.sel);
 	r.drawnSel = r.sel;
+	r.drawnGen = r.gen;
 	return true;
 }
 

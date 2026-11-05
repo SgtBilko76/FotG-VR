@@ -2676,10 +2676,6 @@ void Hud_set_lua_key(int selection) {
 	Msg_key_set_from_scripting = true;
 }
 
-int hud_squadmsg_first_menu_item() {
-	return First_menu_item;
-}
-
 bool hud_squadmsg_items_ready() {
 	return !Rebuild_MsgItems;
 }

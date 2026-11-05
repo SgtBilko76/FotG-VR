@@ -23,20 +23,4 @@ int VrSetup_ButtonAt(float u, float v);
  * ray (or VR_SETUP_NONE). */
 void VrSetup_Render(uint8_t* rgba, int active, int hover0, int hover1);
 
-/* Comms panel (same quad): the squad message menu while it is open. Items 0..count-1 of the shown
- * page in two columns (1-5 left, 6-10 right), then a bottom row with page buttons and Close. */
-enum {
-	VR_COMMS_MAX   = 10,
-	VR_COMMS_PREV  = 100,
-	VR_COMMS_NEXT  = 101,
-	VR_COMMS_CLOSE = 102,
-};
-
-/* item 0..count-1, VR_COMMS_PREV/NEXT/CLOSE, or VR_SETUP_NONE */
-int VrComms_ButtonAt(float u, float v, int count, int has_prev, int has_next);
-
-/* active[i]: 1 = can be picked, 0 = greyed out, -1 = hidden */
-void VrComms_Render(uint8_t* rgba, const char* title, const char* const* labels, const int* active, int count,
-	int has_prev, int has_next, int hover0, int hover1);
-
 #endif
