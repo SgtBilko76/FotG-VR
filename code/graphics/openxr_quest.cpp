@@ -54,8 +54,11 @@ int pointerHand = RIGHT;
 // keys injected this frame that must be released on the next update
 SCP_vector<int> pendingKeyUps;
 
-// Throttle lever (0 = stop .. 1 = full), driven by the right stick Y and held where it is left
+// Throttle lever (0 = stop .. 1 = full), driven by the left stick Y and held where it is left.
+// Afterburner detent: with the lever already at full, pushing the left stick forward again (after
+// letting it back) holds the afterburner.
 float throttleLever = 0.0f;
+bool boostArmed = false; // lever was at full when the stick came back: the next full push boosts
 // Radial menus in flight. Left grip held: flight functions, picked with the left stick. Right grip
 // held: number keys and extras, picked with the right stick (a short tap of the right grip is the
 // S-foils). Releasing the grip triggers the highlighted item (stick centred = nothing). Clockwise
@@ -784,12 +787,17 @@ void openxr_quest_update(bool stereo_frame)
 			rings[RIGHT].open = false;
 		}
 
-		// right stick Y: throttle lever (full sweep in about one second)
-		if (!gripRHeld && std::fabs(stR.y) > 0.15f)
-			throttleLever = std::max(0.0f, std::min(1.0f, throttleLever + stR.y * dt));
-
 		// left ring: open while the left grip is held (not while the comms menu is up)
 		const bool radial = shift && !comms;
+
+		// left stick Y: throttle lever (full sweep in about one second), not while the left stick
+		// points into the ring or the comms menu. Afterburner detent: lever at full + stick pushed again.
+		const float thr = (comms || radial) ? 0.0f : stL.y;
+		if (thr < 0.5f)
+			boostArmed = throttleLever >= 0.999f;
+		const bool boost = boostArmed && thr > 0.85f;
+		if (!boost && std::fabs(thr) > 0.15f)
+			throttleLever = std::max(0.0f, std::min(1.0f, throttleLever + thr * dt));
 		rings[LEFT].open = radial;
 		if (rings[LEFT].open)
 			ringSelect(rings[LEFT], stL);
@@ -822,10 +830,12 @@ void openxr_quest_update(bool stereo_frame)
 		prevCommsDown = comms && stL.y < -0.6f;
 
 		if (pad) {
-			// the left stick points into the radial menu while it is open, so it doesn't steer then
-			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTX, (comms || radial) ? 0 : axisValue(stL.x));
-			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTY, (comms || radial) ? 0 : axisValue(-stL.y));
-			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX, gripRHeld ? 0 : axisValue(stR.x));
+			// Jet layout: right stick = pitch + turn (pad left stick axes), left stick X = roll (pad
+			// right X), left stick Y = throttle lever (pad right Y). A stick that points into a radial
+			// menu (or the comms menu) doesn't fly meanwhile.
+			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTX, gripRHeld ? 0 : axisValue(stR.x));
+			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFTY, gripRHeld ? 0 : axisValue(-stR.y));
+			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX, (comms || radial) ? 0 : axisValue(stL.x));
 			// absolute throttle axis: up (-32767) = full speed, down (+32767) = stop
 			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTY, axisValue(1.0f - 2.0f * throttleLever));
 			SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, comms ? 0 : triggerValue(trigL));
@@ -858,7 +868,7 @@ void openxr_quest_update(bool stereo_frame)
 		if (warpPulse > 0)
 			warpPulse--;
 		btn(SDL_GAMEPAD_BUTTON_RIGHT_STICK, normal && !gripRHeld && clickR);
-		btn(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, sfoilPulse > 0); // S-foils
+		btn(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, sfoilPulse > 0 || boost); // afterburner: grip tap = S-foils, detent hold = boost
 		if (sfoilPulse > 0)
 			sfoilPulse--;
 
@@ -889,6 +899,7 @@ void openxr_quest_update(bool stereo_frame)
 	} else {
 		// Menus: neutral pad, laser pointer drives the mouse
 		lastUpdateSeconds = -1.0f;
+		boostArmed = false;
 		clickLDownSince = -1.0f;
 		autopilotPulse = warpPulse = 0;
 		ringsReset();
@@ -954,12 +965,12 @@ const char* openxr_quest_control_hint(int control, int scancode)
 	};
 	if (control >= 0 && control < static_cast<int>(Control_config.size())) {
 		switch (control) {
-		case FORWARD_THRUST: return "right stick up (throttle)";
-		case REVERSE_THRUST: return "right stick down (throttle)";
-		case ZERO_THROTTLE: return "right stick all the way down";
-		case MAX_THROTTLE: return "right stick all the way up";
-		case ONE_THIRD_THROTTLE: return "right stick to one third";
-		case TWO_THIRDS_THROTTLE: return "right stick to two thirds";
+		case FORWARD_THRUST: return "left stick up (throttle)";
+		case REVERSE_THRUST: return "left stick down (throttle)";
+		case ZERO_THROTTLE: return "left stick all the way down";
+		case MAX_THROTTLE: return "left stick all the way up";
+		case ONE_THIRD_THROTTLE: return "left stick to one third";
+		case TWO_THIRDS_THROTTLE: return "left stick to two thirds";
 		case END_MISSION: return "left stick click (hold 1 s)";
 		default: break;
 		}
