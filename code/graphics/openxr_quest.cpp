@@ -26,6 +26,8 @@ const char* const OPENXR_QUEST_PAD_NAME = "Quest Touch (VR)";
 #include "io/mouse.h"
 #include "osapi/osapi.h"
 #include "playerman/player.h"
+#include "hud/hudsquadmsg.h"
+#include "gamesnd/gamesnd.h"
 #include "popup/popupdead.h"
 
 #define QLOG(...) __android_log_print(ANDROID_LOG_INFO, "QuestVR", __VA_ARGS__)
@@ -555,11 +557,14 @@ void setupOpen(float trigL, float trigR)
 	QLOG("controller setup panel opened");
 }
 
+bool cmDirty = true;
+
 void setupClose(const char* why)
 {
 	if (suVisible)
 		QLOG("controller setup panel closed (%s)", why);
 	suVisible = false;
+	cmDirty = true; // the comms panel may be on the quad again
 }
 
 // laser + trigger on the open panel (either hand)
@@ -584,6 +589,98 @@ void setupInput(float trigL, float trigR)
 	}
 }
 
+// Comms panel: while the squad message (comms) menu is open in flight, its items are shown on a
+// panel in front of the player (same quad and place as the setup panel). Laser + trigger of either
+// hand picks an item, pages, or closes the menu; the left stick + A still work as well. A trigger
+// pulled on the panel doesn't fire until it is released.
+bool cmVisible = false;
+int cmHover[2] = { VR_SETUP_NONE, VR_SETUP_NONE };
+bool cmTrig[2] = { false, false };
+bool trigEaten[2] = { false, false }; // this trigger press belonged to a panel: no fire until released
+SCP_string cmDrawn;                   // what the shown image holds
+struct CommsPage {
+	SCP_string title;
+	SCP_string labels[VR_COMMS_MAX];
+	int active[VR_COMMS_MAX] = {};
+	int count = 0, first = 0;
+	bool prev = false, next = false;
+};
+CommsPage cmPage;
+
+void commsHide()
+{
+	if (cmVisible)
+		QLOG("comms panel hidden");
+	cmVisible = false;
+}
+
+void commsUpdate(float trigL, float trigR)
+{
+	if (!cmVisible) {
+		kbPos = XrVector3f{ xr_offset.xyz.x, xr_offset.xyz.y - 0.3f, -xr_offset.xyz.z - 1.1f };
+		const float half = -20.0f * 0.5f * 3.14159265f / 180.0f;
+		kbQuat = XrQuaternionf{ std::sin(half), 0.0f, 0.0f, std::cos(half) };
+		cmHover[LEFT] = cmHover[RIGHT] = VR_SETUP_NONE;
+		cmTrig[LEFT] = trigL > 0.4f; // a trigger already held (it picked the ring item) doesn't click
+		cmTrig[RIGHT] = trigR > 0.4f;
+		cmVisible = cmDirty = true;
+		QLOG("comms panel shown");
+	}
+	if (!hud_squadmsg_items_ready())
+		return;
+
+	// the menu's current page
+	CommsPage pg;
+	pg.title = Squad_msg_title;
+	pg.first = hud_squadmsg_first_menu_item();
+	const int total = static_cast<int>(MsgItems.size());
+	pg.count = std::max(0, std::min(static_cast<int>(VR_COMMS_MAX), total - pg.first));
+	for (int i = 0; i < pg.count; i++) {
+		pg.labels[i] = MsgItems[pg.first + i].text;
+		pg.active[i] = MsgItems[pg.first + i].active;
+	}
+	pg.prev = pg.first > 0;
+	pg.next = pg.first + VR_COMMS_MAX < total;
+
+	const float trig[2] = { trigL, trigR };
+	for (int h = 0; h < 2; h++) {
+		float u, v;
+		const int hover = keyboardHit(h, u, v) ? VrComms_ButtonAt(u, v, pg.count, pg.prev, pg.next) : VR_SETUP_NONE;
+		cmHover[h] = hover;
+		if (hover != VR_SETUP_NONE)
+			hud_squadmsg_keep_open(); // aiming at the panel keeps the menu open
+		const bool down = trig[h] > (cmTrig[h] ? 0.4f : 0.6f);
+		if (down && !cmTrig[h] && hover != VR_SETUP_NONE) {
+			trigEaten[h] = true;
+			if (hover == VR_COMMS_CLOSE) {
+				QLOG("comms panel: close");
+				hud_squadmsg_toggle();
+			} else if (hover == VR_COMMS_PREV) {
+				hud_squadmsg_page_up();
+			} else if (hover == VR_COMMS_NEXT) {
+				hud_squadmsg_page_down();
+			} else if (pg.active[hover] > 0) {
+				QLOG("comms panel: picked '%s' (%s)", pg.labels[hover].c_str(), pg.title.c_str());
+				Hud_set_lua_key(pg.first + hover);
+			} else {
+				gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
+			}
+		}
+		cmTrig[h] = down;
+	}
+
+	// redraw only when something visible changed
+	SCP_string key = pg.title + '|' + std::to_string(pg.first) + '|' + std::to_string(pg.prev) + std::to_string(pg.next) + '|' +
+		std::to_string(cmHover[LEFT]) + ',' + std::to_string(cmHover[RIGHT]);
+	for (int i = 0; i < pg.count; i++)
+		key += '|' + pg.labels[i] + ':' + std::to_string(pg.active[i]);
+	if (key != cmDrawn) {
+		cmDrawn = key;
+		cmDirty = true;
+	}
+	cmPage = pg;
+}
+
 } // namespace
 
 void openxr_quest_text_field_active()
@@ -595,16 +692,26 @@ void openxr_quest_text_field_active()
 
 bool openxr_quest_keyboard_visible()
 {
-	return kbVisible || suVisible;
+	return kbVisible || suVisible || cmVisible;
 }
 
 bool openxr_quest_keyboard_render(uint8_t* rgba)
 {
-	if (!kbVisible) { // the controller setup panel on the keyboard's quad
+	if (!kbVisible && suVisible) { // the controller setup panel on the keyboard's quad
 		if (!suDirty)
 			return false;
 		VrSetup_Render(rgba, sticks(), suHover[LEFT], suHover[RIGHT]);
 		suDirty = false;
+		return true;
+	}
+	if (!kbVisible) { // the comms panel
+		if (!cmDirty)
+			return false;
+		const char* labels[VR_COMMS_MAX];
+		for (int i = 0; i < VR_COMMS_MAX; i++)
+			labels[i] = cmPage.labels[i].c_str();
+		VrComms_Render(rgba, cmPage.title.c_str(), labels, cmPage.active, cmPage.count, cmPage.prev, cmPage.next, cmHover[LEFT], cmHover[RIGHT]);
+		cmDirty = false;
 		return true;
 	}
 	if (!kbDirty)
@@ -885,6 +992,8 @@ void openxr_quest_update(bool stereo_frame)
 			autopilotPulse = warpPulse = 0;
 			setPadNeutral();
 			setupInput(trigL, trigR);
+			trigEaten[LEFT] = trigEaten[LEFT] || trigL > 0.4f;
+			trigEaten[RIGHT] = trigEaten[RIGHT] || trigR > 0.4f;
 			if (b && !prevB)
 				setupClose("B");
 			if (prevTrigger) {
@@ -894,6 +1003,15 @@ void openxr_quest_update(bool stereo_frame)
 		} else {
 			const bool shift = gripL > 0.5f;
 			const bool comms = Player && (Player->flags & PLAYER_FLAGS_MSG_MODE);
+			if (comms)
+				commsUpdate(trigL, trigR);
+			else
+				commsHide();
+			// a trigger press that clicked a panel stays muted until it is released
+			if (trigL < 0.3f)
+				trigEaten[LEFT] = false;
+			if (trigR < 0.3f)
+				trigEaten[RIGHT] = false;
 			auto btn = [](SDL_GamepadButton b, bool down) {
 				if (pad)
 					SDL_SetJoystickVirtualButton(pad, b, down);
@@ -953,7 +1071,7 @@ void openxr_quest_update(bool stereo_frame)
 				}
 			}
 
-			// comms menu open: left stick up/down moves the selection, a trigger or A picks it
+			// comms menu open: left stick up/down moves the selection, A picks it (triggers: comms panel)
 			bool commsUp = false, commsDown = false;
 			if (comms) {
 				commsUp = stL.y > 0.6f && !prevCommsUp;
@@ -969,8 +1087,8 @@ void openxr_quest_update(bool stereo_frame)
 				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTX, thrBusy ? 0 : axisValue(thrStick.x));
 				// absolute throttle axis: up (-32767) = full speed, down (+32767) = stop
 				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHTY, axisValue(1.0f - 2.0f * throttleLever));
-				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, comms ? 0 : triggerValue(trigL));
-				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, comms ? 0 : triggerValue(trigR));
+				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, (comms || trigEaten[LEFT]) ? 0 : triggerValue(trigL));
+				SDL_SetJoystickVirtualAxis(pad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, (comms || trigEaten[RIGHT]) ? 0 : triggerValue(trigR));
 			}
 
 			const bool normal = !comms;
@@ -1020,7 +1138,7 @@ void openxr_quest_update(bool stereo_frame)
 			// comms menu
 			btn(SDL_GAMEPAD_BUTTON_DPAD_UP, commsUp);
 			btn(SDL_GAMEPAD_BUTTON_DPAD_DOWN, commsDown);
-			btn(SDL_GAMEPAD_BUTTON_DPAD_RIGHT, comms && (a || trigL > 0.6f || trigR > 0.6f));
+			btn(SDL_GAMEPAD_BUTTON_DPAD_RIGHT, comms && a); // triggers pick on the comms panel
 
 			if (prevTrigger) {
 				mouse_mark_button(MOUSE_LEFT_BUTTON, 0);
@@ -1030,6 +1148,7 @@ void openxr_quest_update(bool stereo_frame)
 		kbVisible = false;
 	} else {
 		// Menus: neutral pad, laser pointer drives the mouse
+		commsHide();
 		lastUpdateSeconds = -1.0f;
 		boostArmed = false;
 		clickLDownSince = -1.0f;

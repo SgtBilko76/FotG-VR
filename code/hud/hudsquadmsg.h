@@ -198,6 +198,14 @@ bool hud_squadmsg_ship_order_valid(int shipnum, int order);
 
 void Hud_set_lua_key(int selection);
 
+// VR comms panel (graphics/openxr_quest.cpp): index of the first item on the shown page, whether
+// MsgItems holds the current menu, and paging. Items are picked with Hud_set_lua_key(index).
+int hud_squadmsg_first_menu_item();
+bool hud_squadmsg_items_ready();
+void hud_squadmsg_page_down();
+void hud_squadmsg_page_up();
+void hud_squadmsg_keep_open(); // restarts the menu's 8 s auto-close timer
+
 class HudGaugeSquadMessage: public HudGauge
 {
 protected:

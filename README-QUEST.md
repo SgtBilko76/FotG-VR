@@ -109,8 +109,9 @@ Mission hints ("Press ...") name the controller button or ring item to use, e.g.
 "Press Next target (left ring)". Training missions keep your ship in place until
 you have done the targeting lessons.
 
-Comms menu open: left stick up/down picks an order, A or a trigger confirms,
-Y closes the menu.
+Comms menu open: a *Comms* panel with the menu's entries appears in front of you. Point at
+an entry with either controller and pull the trigger (*More >* / *< Previous* turn the page,
+*Close* closes it). The left stick up/down + A and Y (close) still work too.
 
 **Stick layout:** in flight, hold the left Menu button for a moment and a *VR controller
 setup* panel opens in front of you. Point at **Jet** (right stick flies, left stick is the
