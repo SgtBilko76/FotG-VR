@@ -162,16 +162,16 @@ void ringsReset()
 // menu opens), point the right stick, release. The next level (ship / wing list, orders) is then
 // shown above the hand until the next press; releasing with the stick centred closes the menu.
 // Level 1 also has "Answer 1-9" (mission dialogues): the next press shows 1 - 9, which type
-// the number keys. Items are picked with Hud_set_lua_key (MsgItems index), so it works whatever
+// the number keys, and "N key" (closes the comms menu and types N: target newest ship / missions). Items are picked with Hud_set_lua_key (MsgItems index), so it works whatever
 // page the HUD gauge shows and while FotG's comms pause is on.
 constexpr int RING_MAX = 16;
-constexpr int RI_ANSWER = -2, RI_MORE = -3;
+constexpr int RI_ANSWER = -2, RI_MORE = -3, RI_KEY_N = -4;
 bool numMode = false;          // the next right ring is 1 - 9
 bool rightPreview = false;     // comms level shown above the hand while the grip is up
 int commsOffset = 0;           // first MsgItems entry shown when a level has more than fits
 SCP_string rightLabels[RING_MAX];
 RadialItem rightItems[RING_MAX];
-int rightIndex[RING_MAX];  // MsgItems index, 1-9 in number mode, RI_ANSWER, RI_MORE
+int rightIndex[RING_MAX];  // MsgItems index, 1-9 in number mode, RI_ANSWER, RI_MORE, RI_KEY_N
 int rightDim[RING_MAX];
 SCP_string rightSig;           // contents of the built ring
 const int NUMBER_KEYS[9] = { KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9 };
@@ -221,7 +221,7 @@ void commsRingBuild(bool comms)
 		for (int i = 0; i < static_cast<int>(MsgItems.size()); i++)
 			if (MsgItems[i].active >= 0)
 				vis.push_back(i);
-		const int room = RING_MAX - (level1 ? 1 : 0);
+		const int room = RING_MAX - (level1 ? 2 : 0);
 		const bool more = static_cast<int>(vis.size()) > room;
 		const int shown = more ? room - 1 : static_cast<int>(vis.size());
 		if (!more || commsOffset >= static_cast<int>(vis.size()))
@@ -232,8 +232,10 @@ void commsRingBuild(bool comms)
 		}
 		if (more)
 			add("More...", RI_MORE, 0);
-		if (level1)
+		if (level1) {
 			add("Answer 1-9", RI_ANSWER, 0);
+			add("N key", RI_KEY_N, 0);
+		}
 		sig = SCP_string(Squad_msg_title) + "#" + sig;
 	}
 	Ring& r = rings[RIGHT];
@@ -271,8 +273,14 @@ void commsRingRelease(bool comms)
 				if (comms)
 					hud_squadmsg_toggle();
 				numMode = true;
+			} else if (idx == RI_KEY_N) {
+				if (comms)
+					hud_squadmsg_toggle();
+				commsOffset = 0;
+				pressKey(KEY_N);
+				QLOG("right ring: key N");
 			} else if (idx == RI_MORE) {
-				commsOffset += r.count - 1 - (Squad_msg_mode == SM_MODE_TYPE_SELECT ? 1 : 0);
+				commsOffset += r.count - 1 - (Squad_msg_mode == SM_MODE_TYPE_SELECT ? 2 : 0);
 			} else if (comms && idx >= 0 && idx < static_cast<int>(MsgItems.size()) && MsgItems[idx].active > 0) {
 				QLOG("right ring: picked '%s' (%s)", MsgItems[idx].text.c_str(), Squad_msg_title);
 				Hud_set_lua_key(idx);
@@ -1250,6 +1258,7 @@ const char* openxr_quest_control_hint(int control, int scancode)
 		case TWO_THIRDS_THROTTLE: out = SCP_string(throttleStickName()) + " to two thirds"; return out.c_str();
 		case END_MISSION: return "left stick click (hold 1 s)";
 		case SQUADMSG_MENU: return "right grip (hold): comms ring";
+		case TARGET_NEWEST_SHIP: return "N key (right ring)";
 		default: break;
 		}
 		const auto& cc = Control_config[control];
@@ -1288,6 +1297,8 @@ const char* openxr_quest_control_hint(int control, int scancode)
 					return ringHint(h, it);
 			}
 	}
+	if (scancode == KEY_N)
+		return "N key (right ring)";
 	for (int k = 0; k < 9; k++)
 		if (scancode == NUMBER_KEYS[k]) {
 			out = "Answer 1-9 > " + std::to_string(k + 1) + " (right ring)";

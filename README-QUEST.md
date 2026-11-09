@@ -102,11 +102,12 @@ power to lasers.
 
 Right grip (hold for a moment; a short tap is the S-foils): the **comms ring**. It
 opens the comms menu and shows its first level (ships, wings, all fighters,
-reinforcements, rearm / repair, abort rearm) plus *Answer 1-9*. Point the right
+reinforcements, rearm / repair, abort rearm) plus *Answer 1-9* and *N key*. Point the right
 stick and let go of the grip: the next level (the ship or wing list, then the
 orders) stays above your hand until you hold the grip again. Let go with the stick
 centred to close the comms menu. *Answer 1-9* makes the next ring show 1 - 9, for
-mission dialogues that ask you to press a number. Greyed-out entries can't be used
+mission dialogues that ask you to press a number. *N key* closes the comms menu
+and presses N (target the newest ship; also for missions that ask for N). Greyed-out entries can't be used
 right now.
 
 Mission hints ("Press ...") name the controller button or ring item to use, e.g.
