@@ -96,7 +96,7 @@ anything. While a ring is open its stick doesn't fly the ship.
 
 Left grip, flight functions (clockwise from the top): shields to the front, next
 target, target your target's attacker, next subsystem, targeting computer on/off,
-nearest friendly, comms menu, shields to the rear, chase view, missile salvo, laser link (L key),
+nearest friendly, comms menu, shields to the rear, chase view, missile salvo, laser link (E key, same as a left stick tap),
 balance power and shields, more power to engines, more power to shields, more
 power to lasers.
 
@@ -107,7 +107,7 @@ stick and let go of the grip: the next level (the ship or wing list, then the
 orders) stays above your hand until you hold the grip again. Let go with the stick
 centred to close the comms menu. *Answer 1-9* makes the next ring show 1 - 9, for
 mission dialogues that ask you to press a number. *N key* closes the comms menu
-and presses N (target the newest ship; also for missions that ask for N). Greyed-out entries can't be used
+and presses N (for missions that ask you to press N). Greyed-out entries can't be used
 right now.
 
 Mission hints ("Press ...") name the controller button or ring item to use, e.g.

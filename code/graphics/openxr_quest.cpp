@@ -84,7 +84,7 @@ const RadialItem RADIAL_LEFT[] = {
 	{ "Shields\nrear", SDL_GAMEPAD_BUTTON_BACK, 0, 0 },
 	{ "Chase\nview", SDL_GAMEPAD_BUTTON_MISC2, 0, 0 },
 	{ "Missile\nsalvo", -1, KEY_Q, 0 },
-	{ "Laser\nlink", -1, KEY_L, 0 },
+	{ "Laser\nlink", -1, KEY_E, 0 }, // FotG: E = Cycle Primary Weapon Firing Rate (links the lasers)
 	{ "Balance\npower", SDL_GAMEPAD_BUTTON_TOUCHPAD, KEY_CAPSLOCK, 0 },
 	{ "Power to\nengines", SDL_GAMEPAD_BUTTON_MISC6, 0, 0 },
 	{ "Power to\nshields", SDL_GAMEPAD_BUTTON_MISC5, 0, 0 },
@@ -163,7 +163,7 @@ void ringsReset()
 // menu opens), point the right stick, release. The next level (ship / wing list, orders) is then
 // shown above the hand until the next press; releasing with the stick centred closes the menu.
 // Level 1 also has "Answer 1-9" (mission dialogues): the next press shows 1 - 9, which type
-// the number keys, and "N key" (closes the comms menu and types N: target newest ship / missions). Items are picked with Hud_set_lua_key (MsgItems index), so it works whatever
+// the number keys, and "N key" (closes the comms menu and types N: FotG Custom Control 2 / missions). Items are picked with Hud_set_lua_key (MsgItems index), so it works whatever
 // page the HUD gauge shows and while FotG's comms pause is on.
 constexpr int RING_MAX = 16;
 constexpr int RI_ANSWER = -2, RI_MORE = -3, RI_KEY_N = -4;
@@ -297,7 +297,7 @@ void commsRingRelease(bool comms)
 }
 bool prevCommsUp = false, prevCommsDown = false;
 float lastUpdateSeconds = -1.0f;
-// left stick click: tap = autopilot (sent on release), hold = warp out
+// left stick click: tap = laser link (key E, sent on release), hold = warp out
 constexpr float WARP_HOLD_SECONDS = 1.0f;
 float clickLDownSince = -1.0f;   // < 0: not held
 bool clickLWarpSent = false;
@@ -1132,7 +1132,7 @@ void openxr_quest_update(bool stereo_frame)
 			btn(SDL_GAMEPAD_BUTTON_EAST, normal && b);
 			btn(SDL_GAMEPAD_BUTTON_WEST, normal && x);
 			btn(SDL_GAMEPAD_BUTTON_NORTH, normal && y);
-			// left stick click: short tap = laser fire mode (pad LEFT_STICK), held for WARP_HOLD_SECONDS = hyperspace out
+			// left stick click: short tap = laser link (key E), held for WARP_HOLD_SECONDS = hyperspace out
 			if (normal && !radial && clickL) {
 				if (clickLDownSince < 0.0f) {
 					clickLDownSince = now;
@@ -1142,8 +1142,10 @@ void openxr_quest_update(bool stereo_frame)
 					warpPulse = 2;
 				}
 			} else {
-				if (clickLDownSince >= 0.0f && !clickLWarpSent && !clickL)
-					autopilotPulse = 2;
+				if (clickLDownSince >= 0.0f && !clickLWarpSent && !clickL) {
+					pressKey(KEY_E); // FotG: Cycle Primary Weapon Firing Rate = laser link (autopilot is disabled in FotG)
+					QLOG("left stick tap: laser link (E)");
+				}
 				clickLDownSince = -1.0f;
 			}
 			btn(SDL_GAMEPAD_BUTTON_LEFT_STICK, autopilotPulse > 0);
@@ -1258,6 +1260,7 @@ const char* openxr_quest_control_hint(int control, int scancode)
 		case ONE_THIRD_THROTTLE: out = SCP_string(throttleStickName()) + " to one third"; return out.c_str();
 		case TWO_THIRDS_THROTTLE: out = SCP_string(throttleStickName()) + " to two thirds"; return out.c_str();
 		case END_MISSION: return "left stick click (hold 1 s)";
+		case CYCLE_PRIMARY_WEAPON_SEQUENCE: return "left stick click (tap)";
 		case SQUADMSG_MENU: return "right grip (hold): comms ring";
 		case TARGET_NEWEST_SHIP: return "N key (right ring)";
 		default: break;
@@ -1298,6 +1301,8 @@ const char* openxr_quest_control_hint(int control, int scancode)
 					return ringHint(h, it);
 			}
 	}
+	if (scancode == KEY_E)
+		return "left stick click (tap)";
 	if (scancode == KEY_N)
 		return "N key (right ring)";
 	for (int k = 0; k < 9; k++)
