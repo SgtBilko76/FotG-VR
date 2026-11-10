@@ -84,6 +84,7 @@ const RadialItem RADIAL_LEFT[] = {
 	{ "Shields\nrear", SDL_GAMEPAD_BUTTON_BACK, 0, 0 },
 	{ "Chase\nview", SDL_GAMEPAD_BUTTON_MISC2, 0, 0 },
 	{ "Missile\nsalvo", -1, KEY_Q, 0 },
+	{ "Laser\nlink", -1, KEY_L, 0 },
 	{ "Balance\npower", SDL_GAMEPAD_BUTTON_TOUCHPAD, KEY_CAPSLOCK, 0 },
 	{ "Power to\nengines", SDL_GAMEPAD_BUTTON_MISC6, 0, 0 },
 	{ "Power to\nshields", SDL_GAMEPAD_BUTTON_MISC5, 0, 0 },

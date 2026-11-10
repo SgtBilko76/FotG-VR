@@ -96,7 +96,7 @@ anything. While a ring is open its stick doesn't fly the ship.
 
 Left grip, flight functions (clockwise from the top): shields to the front, next
 target, target your target's attacker, next subsystem, targeting computer on/off,
-nearest friendly, comms menu, shields to the rear, chase view, missile salvo,
+nearest friendly, comms menu, shields to the rear, chase view, missile salvo, laser link (L key),
 balance power and shields, more power to engines, more power to shields, more
 power to lasers.
 
