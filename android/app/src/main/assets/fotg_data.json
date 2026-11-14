@@ -25,7 +25,7 @@
     "https://hestia.feralhosting.com/discovery/nebula/9b/7d/e6132113accc53182a7d6fe0d291920838c2211e91df6bc9430947cf356a"
    ],
    "unpacked": 9714101,
-   "installed": 9528211
+   "installed": 9722653
   },
   {
    "name": "FG_Effects.7z",
@@ -104,7 +104,7 @@
    "accept": [
     "54d8b24f606af28df2868d1d3c1582e889cad6ae8cc22a5a65e2ebaff34e3a54"
    ],
-   "installed": 819724847
+   "installed": 833506400
   },
   {
    "name": "FG_Maps5.7z",
@@ -132,7 +132,7 @@
     "https://hestia.feralhosting.com/discovery/nebula/4c/0c/8878818831ad42f0ee6f6571e2d53a49e146dcf4c2196b7852fc6b8d3a96"
    ],
    "unpacked": 669911394,
-   "installed": 656524046
+   "installed": 669922498
   },
   {
    "name": "FG_Music.7z",
