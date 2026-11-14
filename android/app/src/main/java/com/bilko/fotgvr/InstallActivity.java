@@ -74,8 +74,9 @@ public class InstallActivity extends Activity {
         if (sInstaller != null && sInstaller.isRunning()) return true;
         if (stateDir().exists() || !hasGameData()) return true;
         Damage d = checkData(ctx);
-        String desc = d.describe();
-        if (!d.isEmpty() && !desc.equals(sLastDamage)) Log.w(TAG, "game data damaged: " + desc);
+        String desc = d.describe() + "|" + d.describeUpdate();
+        if (!d.isEmpty() && !desc.equals(sLastDamage))
+            Log.w(TAG, "game data damaged: " + d.describe() + "; update to " + sDataVersion + ": " + d.describeUpdate());
         sLastDamage = desc;
         return !d.isEmpty();
     }
@@ -86,8 +87,15 @@ public class InstallActivity extends Activity {
     static final class Damage {
         final List<DataInstaller.Archive> repair = new ArrayList<>();
         final List<DataInstaller.Archive> intact = new ArrayList<>();
+        /** Whole, but installed from an older Fate of the Galaxy release with different contents. */
+        final List<DataInstaller.Archive> update = new ArrayList<>();
         final List<String> foreign = new ArrayList<>();
-        boolean isEmpty() { return repair.isEmpty() && foreign.isEmpty(); }
+        boolean isEmpty() { return repair.isEmpty() && update.isEmpty() && foreign.isEmpty(); }
+        String describeUpdate() {
+            StringBuilder sb = new StringBuilder();
+            for (DataInstaller.Archive a : update) sb.append(sb.length() > 0 ? ", " : "").append(stem(a));
+            return sb.toString();
+        }
         String describe() {
             StringBuilder sb = new StringBuilder();
             for (DataInstaller.Archive a : repair) sb.append(sb.length() > 0 ? ", " : "").append(stem(a));
@@ -137,6 +145,7 @@ public class InstallActivity extends Activity {
         for (File f : files)
             if (f.getName().startsWith(DataInstaller.PREFIX + "FG_")) installerSet = true;
         java.util.Set<String> claimed = new java.util.HashSet<>();
+        java.util.Map<String, String> record = DataInstaller.readRecord(modDir());
         for (DataInstaller.Archive a : archives) {
             String base = DataInstaller.PREFIX + stem(a);
             long sum = 0;
@@ -154,7 +163,9 @@ public class InstallActivity extends Activity {
                 if (!vpIntact(f)) whole = false;
             }
             if (!installerSet) continue;
-            if (parts == 0 || !whole || sum < a.installed) d.repair.add(a);
+            String rec = record.containsKey(a.name) ? record.get(a.name) : a.legacy;
+            if (parts > 0 && whole && !a.isCurrent(rec)) d.update.add(a);
+            else if (parts == 0 || !whole || sum < a.installed) d.repair.add(a);
             else d.intact.add(a);
         }
         for (File f : files)
@@ -245,7 +256,10 @@ public class InstallActivity extends Activity {
             byte[] b = new byte[8192];
             int n;
             while ((n = in.read(b)) > 0) bo.write(b, 0, n);
-            JSONArray arr = new JSONObject(bo.toString("UTF-8")).getJSONArray("archives");
+            JSONObject root = new JSONObject(bo.toString("UTF-8"));
+            sDataVersion = root.optString("version", "");
+            JSONObject legacy = root.optJSONObject("legacy");
+            JSONArray arr = root.getJSONArray("archives");
             List<DataInstaller.Archive> list = new ArrayList<>();
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject o = arr.getJSONObject(i);
@@ -258,11 +272,17 @@ public class InstallActivity extends Activity {
                 a.urls = new ArrayList<>();
                 JSONArray u = o.getJSONArray("urls");
                 for (int j = 0; j < u.length(); j++) a.urls.add(u.getString(j));
+                JSONArray acc = o.optJSONArray("accept");
+                if (acc != null) for (int j = 0; j < acc.length(); j++) a.accept.add(acc.getString(j));
+                a.legacy = legacy != null ? legacy.optString(a.name, null) : null;
                 list.add(a);
             }
             return list;
         }
     }
+
+    /** Fate of the Galaxy version of fotg_data.json. */
+    static volatile String sDataVersion = "";
 
     private static String gb(long bytes) {
         return String.format(Locale.US, "%.1f GB", bytes / 1e9);
@@ -342,13 +362,16 @@ public class InstallActivity extends Activity {
             return;
         }
         final boolean repair = !damage.repair.isEmpty();
+        final boolean update = !damage.update.isEmpty();
         final List<DataInstaller.Archive> intact = damage.intact;
-        List<DataInstaller.Archive> todo = repair ? damage.repair : archives;
+        List<DataInstaller.Archive> fix = new ArrayList<>(damage.repair);
+        fix.addAll(damage.update);
+        List<DataInstaller.Archive> todo = (repair || update) ? fix : archives;
         long total = 0, installed = 0;
         for (DataInstaller.Archive a : todo) { total += a.size; installed += a.installed > 0 ? a.installed : a.unpacked; }
         long need = DataInstaller.spaceNeeded(todo, stateDir());
         long free = new StatFs(Environment.getExternalStorageDirectory().getPath()).getAvailableBytes();
-        for (DataInstaller.Archive a : damage.repair) free += existingSize(a); // replaced by the repair
+        for (DataInstaller.Archive a : fix) free += existingSize(a); // replaced by the repair / update
 
         StringBuilder sb = new StringBuilder();
         if (repair) {
@@ -356,6 +379,13 @@ public class InstallActivity extends Activity {
               .append("), for example from an installation or copy that did not finish. The game can't start without it.\n\n")
               .append("Press Repair to download just these parts again: ").append(gb(total))
               .append(". Keep the headset on and connected to Wi-Fi until the game starts.\n\n");
+        } else if (update) {
+            sb.append("Fate of the Galaxy ").append(sDataVersion).append(" is out. ")
+              .append(damage.update.size()).append(damage.update.size() == 1 ? " part" : " parts")
+              .append(" of the game data changed (").append(damage.describeUpdate()).append("), the rest stays as it is.\n\n")
+              .append("Press Update to download just these parts: ").append(gb(total))
+              .append(". Keep the headset on and connected to Wi-Fi until the game starts. ")
+              .append("Your pilots, progress and settings are kept.\n\n");
         } else if (inst != null && inst.phase == DataInstaller.FAILED) {
             sb.append("The installation stopped: ").append(inst.error).append("\n\n")
               .append("Check the Wi-Fi connection and press Retry. It continues where it stopped.\n\n");
@@ -379,12 +409,13 @@ public class InstallActivity extends Activity {
             return;
         }
         String label = repair ? "Repair (" + gb(total) + ")"
+                : update ? "Update (" + gb(total) + ")"
                 : (inst != null && inst.phase == DataInstaller.FAILED) ? "Retry"
                 : resume ? "Continue installation" : "Download and install (" + gb(total) + ")";
         final List<DataInstaller.Archive> list = archives;
         setButton(label, new Runnable() {
             @Override public void run() {
-                if (repair) markDone(intact); // an interrupted repair then resumes without them
+                if (repair || update) markDone(intact); // an interrupted repair/update then resumes without them
                 startInstall(list);
             }
         });

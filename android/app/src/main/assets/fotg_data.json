@@ -1,137 +1,185 @@
 {
- "mod": "FotG_R",
- "version": "1.1.1",
+ "mod": "FotG_2",
+ "version": "2.0.2",
+ "legacy": {
+  "FG_Core.7z": "9e53fd35aa8434684b411cb4b39af355a28f631ed8b1c9dee2bf149e6b325118",
+  "FG_Effects.7z": "4fa67f9d3c8fc74d0085f4c3e73908cc7fd2f56d983407a35676f8ec1512e0bc",
+  "FG_Maps1.7z": "77f1252ecb2ced1963c2ebc8b90b6831021d9fb75631efa55a25defcdc5b7562",
+  "FG_Maps2.7z": "59ebc0af52cfc4952abf634797cc575a15ecc7f1e3d7e80bcb6d231a5610f7f4",
+  "FG_Maps3.7z": "208db3ac51a575ef21c5be9a1979e666fb06cdbd0c0926116e87758c829b2ef1",
+  "FG_Maps4.7z": "a548ca69289aeceb8ef268c59a2fb33fb6815a54d63b42dd031d5115cc1c983d",
+  "FG_Maps5.7z": "397020b8f286ae1d70b47471737d74cf3475f00e0c747ae66b922eccf6cf4093",
+  "FG_Models.7z": "769c5a2e3d588a79aec4e977981d91ba94fce7c77b98a99fe997d609dc4259c7",
+  "FG_Music.7z": "81bc59039ab1fed4dc6cd437e1435deef4738cfa43aef07891cf5c838a7c8091",
+  "FG_SndVA.7z": "8f0cc4f3e3accec8dc0822e287763dcfc3a396d135cc1c533758a57aae44f766",
+  "FG_UI.7z": "2ccef370990c6cfe7eb2ff491a179d23e3c8a6abc38d55f9ae78c9f08a85a0d3"
+ },
  "archives": [
   {
    "name": "FG_Core.7z",
-   "size": 944927,
-   "sha256": "9e53fd35aa8434684b411cb4b39af355a28f631ed8b1c9dee2bf149e6b325118",
+   "size": 946298,
+   "sha256": "9b7de6132113accc53182a7d6fe0d291920838c2211e91df6bc9430947cf356a",
    "urls": [
-    "https://cf.fsnebula.org/storage/9e/53/fd35aa8434684b411cb4b39af355a28f631ed8b1c9dee2bf149e6b325118",
-    "https://dl.fsnebula.org/storage/9e/53/fd35aa8434684b411cb4b39af355a28f631ed8b1c9dee2bf149e6b325118",
-    "https://hestia.feralhosting.com/discovery/nebula/9e/53/fd35aa8434684b411cb4b39af355a28f631ed8b1c9dee2bf149e6b325118"
+    "https://cf.fsnebula.org/storage/9b/7d/e6132113accc53182a7d6fe0d291920838c2211e91df6bc9430947cf356a",
+    "https://dl.fsnebula.org/storage/9b/7d/e6132113accc53182a7d6fe0d291920838c2211e91df6bc9430947cf356a",
+    "https://hestia.feralhosting.com/discovery/nebula/9b/7d/e6132113accc53182a7d6fe0d291920838c2211e91df6bc9430947cf356a"
    ],
-   "unpacked": 9700814,
-   "installed": 9709366
+   "unpacked": 9714101,
+   "installed": 9528211
   },
   {
    "name": "FG_Effects.7z",
-   "size": 57511404,
-   "sha256": "4fa67f9d3c8fc74d0085f4c3e73908cc7fd2f56d983407a35676f8ec1512e0bc",
+   "size": 57511391,
+   "sha256": "56e41aeb14ae534a05bb91b336d5f86009ad1b6d439c86da05c213141c75cecf",
    "urls": [
-    "https://cf.fsnebula.org/storage/4f/a6/7f9d3c8fc74d0085f4c3e73908cc7fd2f56d983407a35676f8ec1512e0bc",
-    "https://dl.fsnebula.org/storage/4f/a6/7f9d3c8fc74d0085f4c3e73908cc7fd2f56d983407a35676f8ec1512e0bc",
-    "https://hestia.feralhosting.com/discovery/nebula/4f/a6/7f9d3c8fc74d0085f4c3e73908cc7fd2f56d983407a35676f8ec1512e0bc"
+    "https://cf.fsnebula.org/storage/56/e4/1aeb14ae534a05bb91b336d5f86009ad1b6d439c86da05c213141c75cecf",
+    "https://dl.fsnebula.org/storage/56/e4/1aeb14ae534a05bb91b336d5f86009ad1b6d439c86da05c213141c75cecf",
+    "https://hestia.feralhosting.com/discovery/nebula/56/e4/1aeb14ae534a05bb91b336d5f86009ad1b6d439c86da05c213141c75cecf"
    ],
    "unpacked": 765135239,
+   "accept": [
+    "4fa67f9d3c8fc74d0085f4c3e73908cc7fd2f56d983407a35676f8ec1512e0bc",
+    "c6c35b56e475848a5c2826035e89e49506712a6b20940291f158c23c39357ed1"
+   ],
    "installed": 765365683
   },
   {
    "name": "FG_Maps1.7z",
-   "size": 395065908,
-   "sha256": "77f1252ecb2ced1963c2ebc8b90b6831021d9fb75631efa55a25defcdc5b7562",
+   "size": 395065905,
+   "sha256": "29547bd33898e328dc176235afb21026cf08974468b21b54dd724ba313984769",
    "urls": [
-    "https://cf.fsnebula.org/storage/77/f1/252ecb2ced1963c2ebc8b90b6831021d9fb75631efa55a25defcdc5b7562",
-    "https://dl.fsnebula.org/storage/77/f1/252ecb2ced1963c2ebc8b90b6831021d9fb75631efa55a25defcdc5b7562",
-    "https://hestia.feralhosting.com/discovery/nebula/77/f1/252ecb2ced1963c2ebc8b90b6831021d9fb75631efa55a25defcdc5b7562"
+    "https://cf.fsnebula.org/storage/29/54/7bd33898e328dc176235afb21026cf08974468b21b54dd724ba313984769",
+    "https://dl.fsnebula.org/storage/29/54/7bd33898e328dc176235afb21026cf08974468b21b54dd724ba313984769",
+    "https://hestia.feralhosting.com/discovery/nebula/29/54/7bd33898e328dc176235afb21026cf08974468b21b54dd724ba313984769"
    ],
    "unpacked": 1288410040,
+   "accept": [
+    "77f1252ecb2ced1963c2ebc8b90b6831021d9fb75631efa55a25defcdc5b7562",
+    "fd335af7e091d330a2abdfc66ce2de8dd219f4188cd4ca591d9dc321e93ed954"
+   ],
    "installed": 602650680
   },
   {
    "name": "FG_Maps2.7z",
-   "size": 215465628,
-   "sha256": "59ebc0af52cfc4952abf634797cc575a15ecc7f1e3d7e80bcb6d231a5610f7f4",
+   "size": 215465624,
+   "sha256": "aca9ce151d970ed14b270ee28ac3fd545365464205326e85812bef06ddd42308",
    "urls": [
-    "https://cf.fsnebula.org/storage/59/eb/c0af52cfc4952abf634797cc575a15ecc7f1e3d7e80bcb6d231a5610f7f4",
-    "https://dl.fsnebula.org/storage/59/eb/c0af52cfc4952abf634797cc575a15ecc7f1e3d7e80bcb6d231a5610f7f4",
-    "https://hestia.feralhosting.com/discovery/nebula/59/eb/c0af52cfc4952abf634797cc575a15ecc7f1e3d7e80bcb6d231a5610f7f4"
+    "https://cf.fsnebula.org/storage/ac/a9/ce151d970ed14b270ee28ac3fd545365464205326e85812bef06ddd42308",
+    "https://dl.fsnebula.org/storage/ac/a9/ce151d970ed14b270ee28ac3fd545365464205326e85812bef06ddd42308",
+    "https://hestia.feralhosting.com/discovery/nebula/ac/a9/ce151d970ed14b270ee28ac3fd545365464205326e85812bef06ddd42308"
    ],
    "unpacked": 1250544353,
+   "accept": [
+    "59ebc0af52cfc4952abf634797cc575a15ecc7f1e3d7e80bcb6d231a5610f7f4",
+    "d5315502c5f6f3f5e61b1cd49f3f1d26f2cc0bb87636b5a734a075d1e93b9827"
+   ],
    "installed": 319417285
   },
   {
    "name": "FG_Maps3.7z",
-   "size": 414260626,
-   "sha256": "208db3ac51a575ef21c5be9a1979e666fb06cdbd0c0926116e87758c829b2ef1",
+   "size": 414260623,
+   "sha256": "d98868db12f5c2adb56a641e885f3729f3413e102e200ad1fab0793eff6e3c93",
    "urls": [
-    "https://cf.fsnebula.org/storage/20/8d/b3ac51a575ef21c5be9a1979e666fb06cdbd0c0926116e87758c829b2ef1",
-    "https://dl.fsnebula.org/storage/20/8d/b3ac51a575ef21c5be9a1979e666fb06cdbd0c0926116e87758c829b2ef1",
-    "https://hestia.feralhosting.com/discovery/nebula/20/8d/b3ac51a575ef21c5be9a1979e666fb06cdbd0c0926116e87758c829b2ef1"
+    "https://cf.fsnebula.org/storage/d9/88/68db12f5c2adb56a641e885f3729f3413e102e200ad1fab0793eff6e3c93",
+    "https://dl.fsnebula.org/storage/d9/88/68db12f5c2adb56a641e885f3729f3413e102e200ad1fab0793eff6e3c93",
+    "https://hestia.feralhosting.com/discovery/nebula/d9/88/68db12f5c2adb56a641e885f3729f3413e102e200ad1fab0793eff6e3c93"
    ],
    "unpacked": 1476982188,
+   "accept": [
+    "208db3ac51a575ef21c5be9a1979e666fb06cdbd0c0926116e87758c829b2ef1",
+    "bc08a1b655d84b655f81cc01bb269f61549c18a24849b2fa3a3811a0b669853f"
+   ],
    "installed": 440993824
   },
   {
    "name": "FG_Maps4.7z",
-   "size": 431037596,
-   "sha256": "a548ca69289aeceb8ef268c59a2fb33fb6815a54d63b42dd031d5115cc1c983d",
+   "size": 431474295,
+   "sha256": "01115973d19fc060b4ffc47d19ce33f8a609a5773b2cd60d7e9172c3c43f5d4a",
    "urls": [
-    "https://cf.fsnebula.org/storage/a5/48/ca69289aeceb8ef268c59a2fb33fb6815a54d63b42dd031d5115cc1c983d",
-    "https://dl.fsnebula.org/storage/a5/48/ca69289aeceb8ef268c59a2fb33fb6815a54d63b42dd031d5115cc1c983d",
-    "https://hestia.feralhosting.com/discovery/nebula/a5/48/ca69289aeceb8ef268c59a2fb33fb6815a54d63b42dd031d5115cc1c983d"
+    "https://cf.fsnebula.org/storage/01/11/5973d19fc060b4ffc47d19ce33f8a609a5773b2cd60d7e9172c3c43f5d4a",
+    "https://dl.fsnebula.org/storage/01/11/5973d19fc060b4ffc47d19ce33f8a609a5773b2cd60d7e9172c3c43f5d4a",
+    "https://hestia.feralhosting.com/discovery/nebula/01/11/5973d19fc060b4ffc47d19ce33f8a609a5773b2cd60d7e9172c3c43f5d4a"
    ],
-   "unpacked": 1800977544,
-   "installed": 830010220
+   "unpacked": 1814959264,
+   "accept": [
+    "54d8b24f606af28df2868d1d3c1582e889cad6ae8cc22a5a65e2ebaff34e3a54"
+   ],
+   "installed": 819724847
   },
   {
    "name": "FG_Maps5.7z",
-   "size": 491242041,
-   "sha256": "397020b8f286ae1d70b47471737d74cf3475f00e0c747ae66b922eccf6cf4093",
+   "size": 491242039,
+   "sha256": "64b449009e720dbccbe07cb2acbef1d517c702bc4171806bab5e1d0f5423e340",
    "urls": [
-    "https://cf.fsnebula.org/storage/39/70/20b8f286ae1d70b47471737d74cf3475f00e0c747ae66b922eccf6cf4093",
-    "https://dl.fsnebula.org/storage/39/70/20b8f286ae1d70b47471737d74cf3475f00e0c747ae66b922eccf6cf4093",
-    "https://hestia.feralhosting.com/discovery/nebula/39/70/20b8f286ae1d70b47471737d74cf3475f00e0c747ae66b922eccf6cf4093"
+    "https://cf.fsnebula.org/storage/64/b4/49009e720dbccbe07cb2acbef1d517c702bc4171806bab5e1d0f5423e340",
+    "https://dl.fsnebula.org/storage/64/b4/49009e720dbccbe07cb2acbef1d517c702bc4171806bab5e1d0f5423e340",
+    "https://hestia.feralhosting.com/discovery/nebula/64/b4/49009e720dbccbe07cb2acbef1d517c702bc4171806bab5e1d0f5423e340"
    ],
    "unpacked": 1554795434,
+   "accept": [
+    "397020b8f286ae1d70b47471737d74cf3475f00e0c747ae66b922eccf6cf4093",
+    "7f7d3511a5f4b532200d32b55b89481054ec5a1177d0a8175f05d830ebb7edbf"
+   ],
    "installed": 464289610
   },
   {
    "name": "FG_Models.7z",
-   "size": 141793281,
-   "sha256": "769c5a2e3d588a79aec4e977981d91ba94fce7c77b98a99fe997d609dc4259c7",
+   "size": 141723561,
+   "sha256": "4c0c8878818831ad42f0ee6f6571e2d53a49e146dcf4c2196b7852fc6b8d3a96",
    "urls": [
-    "https://cf.fsnebula.org/storage/76/9c/5a2e3d588a79aec4e977981d91ba94fce7c77b98a99fe997d609dc4259c7",
-    "https://dl.fsnebula.org/storage/76/9c/5a2e3d588a79aec4e977981d91ba94fce7c77b98a99fe997d609dc4259c7",
-    "https://hestia.feralhosting.com/discovery/nebula/76/9c/5a2e3d588a79aec4e977981d91ba94fce7c77b98a99fe997d609dc4259c7"
+    "https://cf.fsnebula.org/storage/4c/0c/8878818831ad42f0ee6f6571e2d53a49e146dcf4c2196b7852fc6b8d3a96",
+    "https://dl.fsnebula.org/storage/4c/0c/8878818831ad42f0ee6f6571e2d53a49e146dcf4c2196b7852fc6b8d3a96",
+    "https://hestia.feralhosting.com/discovery/nebula/4c/0c/8878818831ad42f0ee6f6571e2d53a49e146dcf4c2196b7852fc6b8d3a96"
    ],
-   "unpacked": 669996206,
-   "installed": 670007310
+   "unpacked": 669911394,
+   "installed": 656524046
   },
   {
    "name": "FG_Music.7z",
-   "size": 110123152,
-   "sha256": "81bc59039ab1fed4dc6cd437e1435deef4738cfa43aef07891cf5c838a7c8091",
+   "size": 110123150,
+   "sha256": "beeef96d17a60c86411c37e80646e7ba5885ff9be33ac3b42193c65c94c78167",
    "urls": [
-    "https://cf.fsnebula.org/storage/81/bc/59039ab1fed4dc6cd437e1435deef4738cfa43aef07891cf5c838a7c8091",
-    "https://dl.fsnebula.org/storage/81/bc/59039ab1fed4dc6cd437e1435deef4738cfa43aef07891cf5c838a7c8091",
-    "https://hestia.feralhosting.com/discovery/nebula/81/bc/59039ab1fed4dc6cd437e1435deef4738cfa43aef07891cf5c838a7c8091"
+    "https://cf.fsnebula.org/storage/be/ee/f96d17a60c86411c37e80646e7ba5885ff9be33ac3b42193c65c94c78167",
+    "https://dl.fsnebula.org/storage/be/ee/f96d17a60c86411c37e80646e7ba5885ff9be33ac3b42193c65c94c78167",
+    "https://hestia.feralhosting.com/discovery/nebula/be/ee/f96d17a60c86411c37e80646e7ba5885ff9be33ac3b42193c65c94c78167"
    ],
    "unpacked": 114624685,
+   "accept": [
+    "81bc59039ab1fed4dc6cd437e1435deef4738cfa43aef07891cf5c838a7c8091",
+    "b256368e0340ac32ec2120fe42bea9eb744e76a875693db271f5e5ed3a62d458"
+   ],
    "installed": 114628661
   },
   {
    "name": "FG_SndVA.7z",
-   "size": 233215876,
-   "sha256": "8f0cc4f3e3accec8dc0822e287763dcfc3a396d135cc1c533758a57aae44f766",
+   "size": 233215874,
+   "sha256": "b1ae654bb2e3c88f44e5621dc0a003b716cd7da503325fcd10b04f7a24f6bde9",
    "urls": [
-    "https://cf.fsnebula.org/storage/8f/0c/c4f3e3accec8dc0822e287763dcfc3a396d135cc1c533758a57aae44f766",
-    "https://dl.fsnebula.org/storage/8f/0c/c4f3e3accec8dc0822e287763dcfc3a396d135cc1c533758a57aae44f766",
-    "https://hestia.feralhosting.com/discovery/nebula/8f/0c/c4f3e3accec8dc0822e287763dcfc3a396d135cc1c533758a57aae44f766"
+    "https://cf.fsnebula.org/storage/b1/ae/654bb2e3c88f44e5621dc0a003b716cd7da503325fcd10b04f7a24f6bde9",
+    "https://dl.fsnebula.org/storage/b1/ae/654bb2e3c88f44e5621dc0a003b716cd7da503325fcd10b04f7a24f6bde9",
+    "https://hestia.feralhosting.com/discovery/nebula/b1/ae/654bb2e3c88f44e5621dc0a003b716cd7da503325fcd10b04f7a24f6bde9"
    ],
    "unpacked": 276418279,
+   "accept": [
+    "8f0cc4f3e3accec8dc0822e287763dcfc3a396d135cc1c533758a57aae44f766",
+    "8584c172daa644f50e34ee9b28c7c88d1cd232deefb5f058e3f3c4e5306b9909"
+   ],
    "installed": 276500619
   },
   {
    "name": "FG_UI.7z",
-   "size": 81203470,
-   "sha256": "2ccef370990c6cfe7eb2ff491a179d23e3c8a6abc38d55f9ae78c9f08a85a0d3",
+   "size": 81203468,
+   "sha256": "7d57b42ec06158e31caacb08a365bd8315c435218df8844be95e900be8c774e5",
    "urls": [
-    "https://cf.fsnebula.org/storage/2c/ce/f370990c6cfe7eb2ff491a179d23e3c8a6abc38d55f9ae78c9f08a85a0d3",
-    "https://dl.fsnebula.org/storage/2c/ce/f370990c6cfe7eb2ff491a179d23e3c8a6abc38d55f9ae78c9f08a85a0d3",
-    "https://hestia.feralhosting.com/discovery/nebula/2c/ce/f370990c6cfe7eb2ff491a179d23e3c8a6abc38d55f9ae78c9f08a85a0d3"
+    "https://cf.fsnebula.org/storage/7d/57/b42ec06158e31caacb08a365bd8315c435218df8844be95e900be8c774e5",
+    "https://dl.fsnebula.org/storage/7d/57/b42ec06158e31caacb08a365bd8315c435218df8844be95e900be8c774e5",
+    "https://hestia.feralhosting.com/discovery/nebula/7d/57/b42ec06158e31caacb08a365bd8315c435218df8844be95e900be8c774e5"
    ],
    "unpacked": 94610060,
+   "accept": [
+    "2ccef370990c6cfe7eb2ff491a179d23e3c8a6abc38d55f9ae78c9f08a85a0d3",
+    "59662e7078a0bd815130dc179aeeed4577171621220f10270c2c1ea79baec0b3"
+   ],
    "installed": 94764956
   }
  ]

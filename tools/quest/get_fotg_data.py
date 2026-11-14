@@ -2,24 +2,30 @@
 """Download Fate of the Galaxy from Nebula (the Knossos mod server), unpack it and
 optionally copy it to the headset (Meta Quest or PICO, connected by USB with adb).
 
-    python3 tools/quest/get_fotg_data.py [--version 1.1.1] [--dir FotG-data] [--push [--serial <id>]]
+    python3 tools/quest/get_fotg_data.py [--version 2.0.2] [--dir FotG-data] [--push [--serial <id>]]
 
 Needs 7-Zip (7zz / 7z / 7za on PATH, or --7z <path>) and, for --push, adb.
 Result: <dir>/FotG_R/data/... ; on the headset /sdcard/FotG/FotG_R/data/...
 """
 import argparse, hashlib, json, os, shutil, subprocess, sys, urllib.request
 
-MOD = "FotG_R"
+MOD = "FotG_R"                 # folder name on the headset (the app's -mod), kept since 1.1.1
+NEBULA_IDS = ("FotG_R", "FotG_2")  # Nebula mod ids: FotG_R up to 1.1.3, FotG_2 from 2.0.1 on
 API = "https://api.fsnebula.org/api/1/mod/json/%s/%s"
 REPO = "https://fsnebula.org/storage/repo_minimal.json"
 QUEST_DIR = "/sdcard/FotG/" + MOD
 
 
 def latest_version():
+    """(Nebula id, version) of the newest release."""
     with urllib.request.urlopen(REPO) as r:
         mods = json.load(r)["mods"]
-    vers = [m["version"] for m in mods if m.get("id") == MOD]
-    return max(vers, key=lambda v: [int(x) for x in v.split(".") if x.isdigit()])
+    rel = [(m["id"], m["version"]) for m in mods if m.get("id") in NEBULA_IDS]
+    return max(rel, key=lambda r: (NEBULA_IDS.index(r[0]), [int(x) for x in r[1].split(".") if x.isdigit()]))
+
+
+def nebula_id(ver):
+    return "FotG_R" if int(ver.split(".")[0]) < 2 else "FotG_2"
 
 
 def sha256(path):
@@ -47,9 +53,9 @@ def main():
     sz = a.sevenzip or shutil.which("7zz") or shutil.which("7z") or shutil.which("7za")
     if not sz:
         sys.exit("7-Zip not found: install p7zip/7zip or pass --7z <path>")
-    ver = a.version or latest_version()
-    print("Fate of the Galaxy", ver)
-    with urllib.request.urlopen(API % (MOD, ver)) as r:
+    nid, ver = (nebula_id(a.version), a.version) if a.version else latest_version()
+    print("Fate of the Galaxy", ver, "(" + nid + ")")
+    with urllib.request.urlopen(API % (nid, ver)) as r:
         mod = json.load(r)["mod"]
 
     dl = os.path.join(a.dir, "_dl")

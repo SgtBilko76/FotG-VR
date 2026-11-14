@@ -37,6 +37,49 @@ public final class DataInstaller implements Runnable {
         public String name, sha256;
         public long size, unpacked, installed;
         public List<String> urls;
+        /** Hashes of older releases of this archive with the same contents (no update needed). */
+        public List<String> accept = new ArrayList<>();
+        /** Hash installed by FotG VR 0.3.7 and older, which wrote no record (null: unknown). */
+        public String legacy;
+
+        /** True when the archive installed from the 7z with this hash is current. */
+        public boolean isCurrent(String installedSha) {
+            if (installedSha == null || installedSha.equalsIgnoreCase(sha256)) return true;
+            for (String h : accept) if (h.equalsIgnoreCase(installedSha)) return true;
+            return false;
+        }
+    }
+
+    /** Record of the installed archives in the mod folder: "<archive name> <sha256>" per line. */
+    public static final String RECORD = "fotg_installed.txt";
+
+    public static java.util.Map<String, String> readRecord(File modDir) {
+        java.util.Map<String, String> m = new java.util.TreeMap<>();
+        File f = new File(modDir, RECORD);
+        if (!f.isFile()) return m;
+        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f))) {
+            String l;
+            while ((l = r.readLine()) != null) {
+                String[] p = l.trim().split("\\s+");
+                if (p.length == 2) m.put(p[0], p[1]);
+            }
+        } catch (IOException e) {
+            android.util.Log.w("FotGInstall", "cannot read " + f, e);
+        }
+        return m;
+    }
+
+    static void writeRecord(File modDir, java.util.Map<String, String> m) throws IOException {
+        File f = new File(modDir, RECORD), tmp = new File(modDir, RECORD + ".tmp");
+        try (OutputStream o = new FileOutputStream(tmp)) {
+            StringBuilder sb = new StringBuilder();
+            for (java.util.Map.Entry<String, String> e : m.entrySet()) sb.append(e.getKey()).append(' ').append(e.getValue()).append('\n');
+            o.write(sb.toString().getBytes("UTF-8"));
+        }
+        if (!tmp.renameTo(f)) {
+            f.delete();
+            if (!tmp.renameTo(f)) throw new IOException("cannot write " + f);
+        }
     }
 
     public static final int IDLE = 0, DOWNLOADING = 1, VERIFYING = 2, EXTRACTING = 3, DONE = 4, FAILED = 5;
@@ -111,6 +154,9 @@ public final class DataInstaller implements Runnable {
                     ok.createNewFile();
                 }
                 extract(a, arc);
+                java.util.Map<String, String> rec = readRecord(modDir);
+                rec.put(a.name, a.sha256);
+                writeRecord(modDir, rec);
                 if (!done.createNewFile() && !done.exists()) throw new IOException("cannot write " + done);
                 arc.delete();
                 ok.delete();

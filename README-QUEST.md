@@ -8,8 +8,16 @@ built on the [FreeSpace Open](https://github.com/scp-fs2open/fs2open.github.com)
 engine with OpenXR on OpenGL ES. Branch: `fotg-vr`. FreeSpace 2 is not needed.
 
 The APK contains only the engine. The game data (free) comes from the Fate of the
-Galaxy team's official Nebula release; the app's **One-Tap Installer** downloads it
-on first start (2.6 GB download, 4.6 GB on the headset).
+Galaxy team's official Nebula release (currently Fate of the Galaxy 2.0.2); the
+app's **One-Tap Installer** downloads it on first start (2.6 GB download, 4.6 GB on
+the headset).
+
+**Updating the game data:** when a new APK comes with a newer Fate of the Galaxy
+release, the app shows *Update* on its next start and downloads only the parts
+whose contents changed (2.0.2 over the 1.1.1 data of FotG VR 0.3.7 and older:
+FG_Core, FG_Maps4 and FG_Models, 0.6 GB). Pilots, progress and settings are kept.
+Data copied with `get_fotg_data.py` or from Knossos is not checked: run the script
+again or copy the new release.
 
 ## Install
 
@@ -26,7 +34,7 @@ on first start (2.6 GB download, 4.6 GB on the headset).
 
 Without Wi-Fi on the headset: on a PC with Python 3, 7-Zip and the headset on USB,
 `python3 tools/quest/get_fotg_data.py --push` does the same and copies the result
-to `/sdcard/FotG/FotG_R`. A plain copy of the Knossos.NET install (`FotG_R-<version>`
+to `/sdcard/FotG/FotG_R`. A plain copy of the Knossos.NET install (`FotG_2-<version>`
 folder contents to `/sdcard/FotG/FotG_R`) works too, but takes 8.7 GB and loads
 more slowly.
 
